@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>酒馆资产工坊 - TavernCardHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .ui-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .pill-tab { padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: #64748b; transition: all 0.2s; background: #ffffff; border: 1px solid #e2e8f0; }
+        .pill-tab.active { background: #7c3aed; color: #ffffff; border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
+        .wb-card-container { background: #ffffff; border: 1.5px solid #a855f7; border-radius: 1rem; padding: 0.875rem; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08); }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #sidebarDrawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800">
+
+    <header class="h-14 px-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-20 shadow-xs">
+        <div class="flex items-center space-x-3 min-w-0">
+            <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95 shrink-0">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <h1 id="pageTitle" class="font-bold text-base text-slate-800 tracking-tight truncate">角色资产工坊</h1>
+        </div>
+
+        <div class="flex items-center space-x-2 shrink-0">
+            <label class="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 shadow-md shadow-purple-200 active:scale-95">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>导入资产</span>
+                <input type="file" id="fileInput" multiple accept=".png,.json,.txt,.docx" class="hidden">
+            </label>
+        </div>
+    </header>
+
+    <div id="drawerOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <aside id="sidebarDrawer" class="fixed top-0 left-0 bottom-0 w-80 bg-white border-r border-slate-200 z-40 p-4 flex flex-col justify-between -translate-x-full shadow-2xl overflow-y-auto custom-scrollbar">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 px-2">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-xl">
+                        <i data-lucide="box" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">Tavern Card Hub</h2>
+                        <p class="text-[10px] text-slate-400">酒馆角色与世界书工坊</p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-1">
+                <div class="text-[11px] font-semibold text-slate-400 px-3 py-1 uppercase tracking-wider">资产分类</div>
+                
+                <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="users" class="w-4 h-4 text-purple-600"></i>
+                        <span>角色卡 (Cards)</span>
+                    </div>
+                    <span id="badge-cards" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('worldbooks')" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
+                        <span>世界书 (Worldbooks)</span>
+                    </div>
+                    <span id="badge-worldbooks" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('scenarios')" id="tab-scenarios" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                        <span>小剧场 (Scenarios)</span>
+                    </div>
+                    <span id="badge-scenarios" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="code-2" class="w-4 h-4 text-rose-500"></i>
+                        <span>酒馆正则 (Regex)</span>
+                    </div>
+                    <span id="badge-regex" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="file-text" class="w-4 h-4 text-sky-500"></i>
+                        <span>文档/文本 (Docs)</span>
+                    </div>
+                    <span id="badge-docs" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+            </div>
+
+            <div class="bg-purple-50/80 border border-purple-100 rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <button onclick="toggleCloudConfigCollapse()" class="text-xs font-bold text-purple-700 flex items-center gap-1.5">
+                        <i data-lucide="cloud" class="w-4 h-4 text-purple-600"></i>
+                        <span>☁️ Supabase 云端备份设置</span>
+                        <i data-lucide="chevron-down" id="cloudConfigChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                    </button>
+                    <span id="cloudStatusBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">已连接</span>
+                </div>
+
+                <div id="cloudConfigBody" class="space-y-2.5 pt-1 hidden">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Project URL</label>
+                        <input type="text" id="cfgSupabaseUrl" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Anon Key</label>
+                        <input type="password" id="cfgSupabaseKey" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div class="flex items-center justify-between gap-1.5 pt-1">
+                        <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-700 transition flex-1">保存云端配置</button>
+                        <button onclick="manualCloudSync()" class="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-[10px] font-semibold hover:bg-purple-200 transition">手动同步</button>
+                        <button onclick="restoreFromCloud()" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-semibold hover:bg-emerald-200 transition">云端恢复</button>
+                    </div>
+
+                    <div class="bg-white/80 border border-purple-100 rounded-xl p-2.5 space-y-1.5 text-[10px] text-slate-600 leading-normal">
+                        <div class="font-bold text-purple-700 flex items-center justify-between">
+                            <span>📖 部署与建表教程 (小白3步)</span>
+                            <button onclick="copySqlCode()" class="text-purple-600 hover:underline flex items-center gap-0.5 font-normal">
+                                <i data-lucide="copy" class="w-3 h-3"></i> 复制SQL
+                            </button>
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-[10px] text-slate-500">
+                            <li>登录 <a href="https://supabase.com" target="_blank" class="text-purple-600 underline">supabase.com</a> 创建免费项目。</li>
+                            <li>进入 <span class="font-bold text-slate-700">SQL Editor</span> 运行复制的一键建表 SQL。</li>
+                            <li>复制设置里的 <span class="font-bold text-slate-700">URL</span> 与 <span class="font-bold text-slate-700">Anon Key</span> 填入上方保存即可。</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 text-center">
+            <p class="text-[10px] text-slate-400">IndexedDB + Supabase 云端多用户独立备份</p>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索角色卡、世界书或文档..." class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500 transition">
+            </div>
+            <span id="itemCountText" class="text-xs text-slate-400 font-medium px-2">共 0 项</span>
+        </div>
+
+        <div id="listView" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+        </div>
+
+        <div id="detailView" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
+            <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <button onclick="closeDetailView()" class="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-purple-600 transition">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        <span>返回列表</span>
+                    </button>
+                    <div id="headerExportActions" class="flex items-center gap-1.5 overflow-x-auto">
+                        <button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="secondaryPillsBar" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    <button onclick="switchDetailTab('overview')" id="detail-tab-overview" class="pill-tab active flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                        <span>人设</span>
+                    </button>
+                    <button onclick="switchDetailTab('greetings')" id="detail-tab-greetings" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <span>开场白</span>
+                    </button>
+                    <button onclick="switchDetailTab('worldbook')" id="detail-tab-worldbook" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="globe" class="w-4 h-4"></i>
+                        <span>世界书</span>
+                    </button>
+                    <button onclick="switchDetailTab('regex')" id="detail-tab-regex" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="code" class="w-4 h-4"></i>
+                        <span>酒馆正则</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div id="subview-overview" class="space-y-4">
+                    <div class="ui-card p-4 space-y-2">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <button onclick="togglePersonalityCollapse()" class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="user" class="w-4 h-4"></i>
+                                <span>角色人设 (Personality & Description)</span>
+                                <i data-lucide="chevron-down" id="personalityChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                            </button>
+                            <button onclick="copyText('overviewPersonalityText')" class="text-xs text-slate-400 hover:text-purple-600 flex items-center gap-1">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制人设
+                            </button>
+                        </div>
+                        <div id="overviewPersonalityBody" class="hidden">
+                            <div id="overviewPersonalityText" class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans max-h-96 overflow-y-auto custom-scrollbar pt-2">无纯人设设定</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="subview-greetings" class="space-y-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">开场白与备用开场白列表</div>
+                    </div>
+                    <div id="overviewGreetingsList" class="space-y-3"></div>
+                </div>
+
+                <div id="subview-worldbook" class="space-y-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">世界书条目列表</div>
+                        <button onclick="addNewEntry()" class="px-3 py-1.5 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>新增条目</span>
+                        </button>
+                    </div>
+                    <div id="wbEntriesList" class="space-y-3"></div>
+                </div>
+
+                <div id="subview-regex" class="space-y-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">酒馆正则表达列表</div>
+                        <button onclick="addNewRegexScript()" class="px-3 py-1.5 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>新增正则</span>
+                        </button>
+                    </div>
+                    <div id="regexEntriesList" class="space-y-3"></div>
+                </div>
+
+                <div id="subview-doc-full" class="space-y-4 hidden">
+                    <div class="ui-card p-4 space-y-2">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div id="docFullTitle" class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="file-text" class="w-4 h-4"></i>
+                                <span>文档全文内容</span>
+                            </div>
+                            <button onclick="copyText('docFullContentText')" class="text-xs text-slate-400 hover:text-purple-600 flex items-center gap-1">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制全文
+                            </button>
+                        </div>
+                        <div id="docFullContentText" class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans max-h-[70vh] overflow-y-auto custom-scrollbar pt-2">无文档内容</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+        const DEFAULT_SUPABASE_URL = "https://hvvihepqthfxpoglryqh.supabase.co";
+        const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dmloZXBxdGhmeXBvZ2xyeXFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2MjIxNTgsImV4cCI6MjA2ODE5ODE1OH0.3K8y4XQ33WJpD84dYfOaM5X8S7R23YQ017382211993";
+
+        let supabaseClient = null;
+        let cloudConfigCollapsed = true;
+
+        function initSupabaseClient() {
+            const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || DEFAULT_SUPABASE_URL;
+            const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || DEFAULT_SUPABASE_KEY;
+            document.getElementById('cfgSupabaseUrl').value = customUrl;
+            document.getElementById('cfgSupabaseKey').value = customKey;
+
+            if (window.supabase && customUrl && customKey) {
+                try {
+                    supabaseClient = window.supabase.createClient(customUrl, customKey);
+                    document.getElementById('cloudStatusBadge').innerText = '已连接';
+                    document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold';
+                } catch(e) {
+                    document.getElementById('cloudStatusBadge').innerText = '未连接';
+                    document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold';
+                }
+            }
+        }
+
+        function saveCustomCloudConfig() {
+            const url = document.getElementById('cfgSupabaseUrl').value.trim();
+            const key = document.getElementById('cfgSupabaseKey').value.trim();
+            if (!url || !key) { alert('请填写完整的 Supabase URL 与 Anon Key！'); return; }
+            localStorage.setItem('TAVERN_SUPABASE_URL', url);
+            localStorage.setItem('TAVERN_SUPABASE_KEY', key);
+            initSupabaseClient();
+            alert('Supabase 云端配置已保存！');
+        }
+
+        function toggleCloudConfigCollapse() {
+            cloudConfigCollapsed = !cloudConfigCollapsed;
+            const body = document.getElementById('cloudConfigBody');
+            const chevron = document.getElementById('cloudConfigChevron');
+            if (cloudConfigCollapsed) { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+            else { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+        }
+
+        const SQL_CODE = `CREATE TABLE IF NOT EXISTS tavern_assets (id TEXT PRIMARY KEY, category TEXT, name TEXT, file_type TEXT, card_data JSONB, raw_text TEXT, raw_buffer_base64 TEXT, created_at BIGINT); ALTER TABLE tavern_assets ENABLE ROW LEVEL SECURITY; CREATE POLICY "Public Access" ON tavern_assets FOR ALL USING (true) WITH CHECK (true);`;
+
+        function copySqlCode() { navigator.clipboard.writeText(SQL_CODE); alert('建表 SQL 已经复制！'); }
+
+        let db, currentTab = 'cards', currentItem = null, personalityCollapsed = true;
+
+        function toggleSidebar() {
+            const drawer = document.getElementById('sidebarDrawer'), overlay = document.getElementById('drawerOverlay');
+            if (!drawer.classList.contains('-translate-x-full')) { drawer.classList.add('-translate-x-full'); overlay.classList.add('opacity-0', 'pointer-events-none'); }
+            else { drawer.classList.remove('-translate-x-full'); overlay.classList.remove('opacity-0', 'pointer-events-none'); }
+        }
+
+        const request = indexedDB.open('TavernCardHubDB', 1);
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains('assets')) {
+                const store = db.createObjectStore('assets', { keyPath: 'id' });
+                store.createIndex('category', 'category', { unique: false });
+            }
+        };
+        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); };
+
+        function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (let file of files) await processFile(file);
+            updateBadges(); renderItems(); e.target.value = '';
+        });
+
+        async function processFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase(), id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            if (ext === 'png') {
+                const arrayBuffer = await file.arrayBuffer(), jsonText = extractCharaChunk(arrayBuffer);
+                let cardData = {}; if (jsonText) { try { cardData = JSON.parse(jsonText); } catch(err){} }
+                const dataObj = cardData.data || cardData;
+                const asset = { id, category: 'cards', name: dataObj.name || file.name.replace('.png', ''), fileType: 'png', rawBuffer: arrayBuffer, cardData, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(cardData), worldbook: dataObj.character_book || null, regexScripts: dataObj.extensions?.regex_scripts || null, rawText: JSON.stringify(cardData, null, 2), createdAt: Date.now() };
+                await saveAsset(asset);
+            } else if (ext === 'json') {
+                const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
+                let category = 'cards', name = file.name.replace('.json', ''), dataObj = json.data || json;
+                if (json.entries || json.character_book) { category = 'worldbooks'; name = json.name || name; }
+                else if (Array.isArray(json) && json[0]?.scriptName) category = 'regex';
+                else if (dataObj.name) { category = 'cards'; name = dataObj.name; }
+                else if (json.scenario || json.prompt) category = 'scenarios';
+                const asset = { id, category, name, fileType: 'json', cardData: json, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
+                await saveAsset(asset);
+            } else if (ext === 'txt') {
+                const text = await file.text(); await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
+            } else if (ext === 'docx') {
+                const arrayBuffer = await file.arrayBuffer(), result = await mammoth.extractRawText({ arrayBuffer });
+                await saveAsset({ id, category: 'docs', name: file.name, fileType: 'docx', rawText: result.value, rawBuffer: arrayBuffer, createdAt: Date.now() });
+            }
+        }
+
+        function extractPersonalityDeep(rootObj) {
+            if (!rootObj) return '无人设设定';
+            const d = rootObj.data || rootObj;
+            let candidates = [d.description, d.personality, d.scenario, d.system_prompt, rootObj.description, rootObj.personality].filter(Boolean);
+            if (candidates.length === 0) return '无人设设定';
+            let rawText = candidates[0];
+            if (typeof rawText === 'string' && (rawText.trim().startsWith('{') || rawText.trim().startsWith('"{'))) {
+                try {
+                    let cleanStr = rawText.trim().replace(/^"/, '').replace(/"$/, '').replace(/\\"/g, '"');
+                    let parsed = JSON.parse(cleanStr);
+                    if (parsed.description) rawText = parsed.description;
+                    else if (parsed.personality) rawText = parsed.personality;
+                } catch(e){}
+            }
+            return String(rawText).replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        }
+
+        function extractCharaChunk(arrayBuffer) {
+            const dataView = new DataView(arrayBuffer); let offset = 8;
+            while (offset < dataView.byteLength) {
+                const length = dataView.getUint32(offset), type = String.fromCharCode(dataView.getUint8(offset+4), dataView.getUint8(offset+5), dataView.getUint8(offset+6), dataView.getUint8(offset+7));
+                if (type === 'tEXt') {
+                    const chunkData = new Uint8Array(arrayBuffer, offset + 8, length); let nullIndex = -1;
+                    for (let i = 0; i < chunkData.length; i++) { if (chunkData[i] === 0) { nullIndex = i; break; } }
+                    if (nullIndex !== -1) {
+                        const keyword = new TextDecoder('iso-8859-1').decode(chunkData.subarray(0, nullIndex));
+                        if (keyword === 'chara' || keyword === 'ccv3') { return decodeURIComponent(escape(atob(new TextDecoder('iso-8859-1').decode(chunkData.subarray(nullIndex + 1))))); }
+                    }
+                }
+                offset += 12 + length;
+            }
+            return null;
+        }
+
+        function saveAsset(asset) {
+            return new Promise((resolve) => {
+                const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
+                tx.oncomplete = () => { resolve(); syncAssetToCloudSilent(asset); };
+            });
+        }
+
+        function getAllAssets() {
+            return new Promise((resolve) => {
+                const tx = db.transaction('assets', 'readonly'), req = tx.objectStore('assets').getAll();
+                req.onsuccess = () => resolve(req.result || []);
+            });
+        }
+
+        async function syncAssetToCloudSilent(asset) {
+            if (!supabaseClient) return;
+            try {
+                let base64Buf = null;
+                if (asset.rawBuffer) {
+                    const bytes = new Uint8Array(asset.rawBuffer); let binary = '';
+                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                    base64Buf = btoa(binary);
+                }
+                await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
+            } catch(e){}
+        }
+
+        async function manualCloudSync() {
+            const assets = await getAllAssets(); document.getElementById('cloudStatusBadge').innerText = '同步中...';
+            for (let a of assets) await syncAssetToCloudSilent(a);
+            document.getElementById('cloudStatusBadge').innerText = '同步完成'; setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
+        }
+
+        async function restoreFromCloud() {
+            if (!supabaseClient) return;
+            document.getElementById('cloudStatusBadge').innerText = '恢复中...';
+            try {
+                const { data } = await supabaseClient.from('tavern_assets').select('*');
+                if (data && data.length > 0) {
+                    for (let row of data) {
+                        let buffer = null;
+                        if (row.raw_buffer_base64) {
+                            const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
+                            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                            buffer = bytes.buffer;
+                        }
+                        const dataObj = row.card_data?.data || row.card_data || {};
+                        const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                        const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
+                    }
+                    updateBadges(); renderItems(); alert(`恢复了 ${data.length} 项记录！`);
+                }
+            } catch(e){ alert('恢复失败，请检查配置'); }
+            document.getElementById('cloudStatusBadge').innerText = '已连接';
+        }
+
+        async function autoSyncFromCloudSilent() {
+            if (!supabaseClient) return;
+            try { const localAssets = await getAllAssets(); if (localAssets.length === 0) await restoreFromCloud(); } catch(e){}
+        }
+
+        async function updateBadges() {
+            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, scenarios: 0, regex: 0, docs: 0 };
+            assets.forEach(a => { if (counts[a.category] !== undefined) counts[a.category]++; });
+            for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
+        }
+
+        async function renderItems() {
+            const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase(), container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword))));
+            document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
+            if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-slate-400"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
+                card.onclick = () => openDetailView(item);
+                let coverHtml = '';
+                if (item.rawBuffer && item.fileType === 'png') {
+                    const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
+                    coverHtml = `<div class="h-44 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
+                } else {
+                    coverHtml = `<div class="h-28 rounded-xl bg-purple-50 mb-2 flex items-center justify-center text-purple-400"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-8 h-8"></i></div>`;
+                }
+                card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-slate-800 text-center truncate py-1">${item.name}</h3></div>`;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openDetailView(item) {
+            currentItem = item; document.getElementById('pageTitle').innerText = item.name;
+            document.getElementById('listView').classList.add('hidden'); document.getElementById('detailView').classList.remove('hidden'); document.getElementById('detailView').classList.add('flex');
+            setupHeaderExportActions(item);
+            if (item.category === 'docs') { document.getElementById('secondaryPillsBar').classList.add('hidden'); switchDetailTab('doc-full'); document.getElementById('docFullContentText').innerText = item.rawText || '无内容'; return; }
+            document.getElementById('secondaryPillsBar').classList.remove('hidden');
+            let pText = item.personality || extractPersonalityDeep(item.cardData || {});
+            document.getElementById('overviewPersonalityText').innerText = pText;
+            personalityCollapsed = true; document.getElementById('overviewPersonalityBody').classList.add('hidden'); document.getElementById('personalityChevron').classList.remove('rotate-180');
+            renderGreetingsList(item); renderWorldbookEntries(); renderRegexEntries(); switchDetailTab('overview');
+        }
+
+        function togglePersonalityCollapse() {
+            personalityCollapsed = !personalityCollapsed;
+            const body = document.getElementById('overviewPersonalityBody'), chevron = document.getElementById('personalityChevron');
+            if (personalityCollapsed) { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+            else { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+        }
+
+        function setupHeaderExportActions(item) {
+            const container = document.getElementById('headerExportActions');
+            container.innerHTML = `<button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            if (item.category === 'cards') {
+                if (item.fileType === 'png' && item.rawBuffer) {
+                    const btnPng = document.createElement('button'); btnPng.onclick = () => downloadBuffer(item.rawBuffer, `${item.name}.png`, 'image/png');
+                    btnPng.className = "px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100 text-[11px] font-semibold transition flex items-center gap-1"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
+                }
+                const btnJson = document.createElement('button'); btnJson.onclick = () => downloadText(item.rawText || JSON.stringify(item.cardData, null, 2), `${item.name}.json`, 'application/json');
+                btnJson.className = "px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[11px] font-semibold transition flex items-center gap-1"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
+            }
+            lucide.createIcons();
+        }
+
+        function downloadText(text, filename, mimeType) {
+            const blob = new Blob([text], { type: `${mimeType};charset=utf-8` }), url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function downloadBuffer(buffer, filename, mimeType) {
+            const blob = new Blob([buffer], { type: mimeType }), url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function renderGreetingsList(item) {
+            const container = document.getElementById('overviewGreetingsList'); container.innerHTML = '';
+            const allGreetings = []; if (item.firstMes) allGreetings.push({ title: '主开场白', text: item.firstMes });
+            const alts = item.alternateGreetings || item.cardData?.data?.alternate_greetings || []; alts.forEach((g, idx) => allGreetings.push({ title: `备用开场白 #${idx + 1}`, text: g }));
+            if (allGreetings.length === 0) { container.innerHTML = `<div class="text-xs text-slate-400 py-8 text-center">无开场白设定</div>`; return; }
+            allGreetings.forEach((gItem, index) => {
+                const box = document.createElement('div'); box.className = "wb-card-container space-y-2";
+                box.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-purple-100"><button onclick="toggleGreetingItemCollapse(${index})" class="text-xs font-bold text-purple-600 flex items-center gap-1.5"><i data-lucide="chevron-down" id="greeting-chevron-${index}" class="w-3.5 h-3.5 text-purple-600 transition-transform duration-200"></i><span>${gItem.title}</span></button><button onclick="copyGreetingText(${index})" class="text-xs text-slate-400 hover:text-purple-600 flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制</button></div><div id="greeting-body-${index}" class="hidden"><div id="greeting-text-${index}" class="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap pt-1">${gItem.text}</div></div>`;
+                container.appendChild(box);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleGreetingItemCollapse(index) {
+            const body = document.getElementById(`greeting-body-${index}`), chevron = document.getElementById(`greeting-chevron-${index}`);
+            if (body.classList.contains('hidden')) { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+            else { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+        }
+
+        function copyGreetingText(index) {
+            const el = document.getElementById(`greeting-text-${index}`);
+            if (el) { navigator.clipboard.writeText(el.innerText); alert('开场白已复制！'); }
+        }
+
+        function closeDetailView() {
+            document.getElementById('pageTitle').innerText = '角色资产工坊'; document.getElementById('detailView').classList.add('hidden'); document.getElementById('detailView').classList.remove('flex'); document.getElementById('listView').classList.remove('hidden'); currentItem = null;
+        }
+
+        function switchDetailTab(subtab) {
+            document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+            const activePill = document.getElementById(`detail-tab-${subtab}`); if (activePill) activePill.classList.add('active');
+            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full'].forEach(st => {
+                const el = document.getElementById(`subview-${st}`);
+                if (st === subtab) el.classList.remove('hidden'); else el.classList.add('hidden');
+            });
+        }
+
+        function renderWorldbookEntries() {
+            const container = document.getElementById('wbEntriesList'); container.innerHTML = '';
+            const wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (!entries || entries.length === 0) { container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">暂无世界书词条</div>`; return; }
+            entries.forEach((entry, index) => {
+                const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词'), commentTitle = entry.comment || keysText || `词条 #${index + 1}`;
+                const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
+                card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-purple-100"><div class="flex items-center gap-2 min-w-0 flex-1"><i data-lucide="grip-vertical" class="w-4 h-4 text-slate-300 shrink-0"></i><input type="checkbox" ${entry.enabled !== false ? 'checked' : ''} onchange="toggleEntryEnabled(${index})" class="w-4 h-4 text-purple-600 rounded border-slate-300"><button onclick="toggleWbEntryCollapse(${index})" class="text-xs font-bold text-slate-800 flex items-center gap-1 truncate"><i data-lucide="chevron-down" id="wb-chevron-${index}" class="w-3.5 h-3.5 text-purple-600 shrink-0 transition-transform duration-200"></i><span class="truncate">人设 · ${commentTitle}</span></button></div><div class="flex items-center gap-1.5 shrink-0"><span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">${entry.constant ? '🔵 始终' : '⚪ 条件'}</span><button onclick="copyEntryContent(${index})" class="p-1 rounded text-slate-400 hover:text-purple-600"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button><button onclick="deleteEntry(${index})" class="p-1 rounded text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div><div id="wb-body-${index}" class="space-y-3 hidden"><div><label class="block text-[11px] font-semibold text-slate-400 mb-1">标题 / 注释</label><input type="text" value="${commentTitle}" onchange="updateEntryField(${index}, 'comment', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium"></div><div><label class="block text-[11px] font-semibold text-slate-400 mb-1">内容</label><textarea onchange="updateEntryField(${index}, 'content', this.value)" class="w-full h-36 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono custom-scrollbar">${entry.content || ''}</textarea></div></div>`;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleWbEntryCollapse(index) {
+            const body = document.getElementById(`wb-body-${index}`), chevron = document.getElementById(`wb-chevron-${index}`);
+            if (body.classList.contains('hidden')) { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+            else { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+        }
+
+        async function updateEntryField(index, field, value) {
+            const wb = currentItem.worldbook || currentItem.cardData, entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) { entries[index][field] = value; await saveAsset(currentItem); }
+        }
+
+        function renderRegexEntries() {
+            const container = document.getElementById('regexEntriesList'); container.innerHTML = '';
+            const regexList = currentItem?.regexScripts || currentItem?.cardData?.data?.extensions?.regex_scripts || currentItem?.cardData;
+            const scripts = Array.isArray(regexList) ? regexList : [];
+            if (!scripts || scripts.length === 0) { container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">暂无正则替换规则</div>`; return; }
+            scripts.forEach((script, idx) => {
+                const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
+                card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-purple-100"><div class="font-bold text-xs text-slate-800 flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5 text-purple-600"></i><span>${script.scriptName || `正则规则 #${idx + 1}`}</span></div></div><div><div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-purple-700 break-all">${script.findRegex || ''}</div></div>`;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function copyEntryContent(index) {
+            const wb = currentItem.worldbook || currentItem.cardData, entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) { navigator.clipboard.writeText(entries[index].content || ''); alert('词条内容已复制！'); }
+        }
+
+        async function deleteCurrentItem() {
+            if (!currentItem) return;
+            if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
+                const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').delete(currentItem.id);
+                tx.oncomplete = async () => { if (supabaseClient) { try { await supabaseClient.from('tavern_assets').delete().eq('id', currentItem.id); } catch(e){} } closeDetailView(); updateBadges(); renderItems(); };
+            }
+        }
+
+        function copyText(id) { const text = document.getElementById(id)?.innerText; if (text) { navigator.clipboard.writeText(text); alert('已复制到剪贴板！'); } }
+    </script>
+</body>
+</html>
