@@ -39,7 +39,6 @@
             border-color: #7c3aed;
             box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
         }
-        /* Style matching 3rd screenshot */
         .wb-card-container {
             background: #ffffff;
             border: 1.5px solid #a855f7;
@@ -253,7 +252,7 @@
                     </div>
                 </div>
 
-                <!-- Sub-tab 3: Regex List View (MATCHING SCREENSHOT 2 EXACTLY) -->
+                <!-- Sub-tab 3: Regex List View -->
                 <div id="subview-regex" class="space-y-4 hidden">
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">酒馆正则表达列表</div>
@@ -263,7 +262,7 @@
                         </button>
                     </div>
                     <div id="regexEntriesList" class="space-y-3">
-                        <!-- Regex entries dynamically added here with screenshot 2 style -->
+                        <!-- Regex entries dynamically added here -->
                     </div>
                 </div>
 
@@ -344,7 +343,7 @@
                 const name = dataObj.name || file.name.replace('.png', '');
                 const firstMes = dataObj.first_mes || '';
                 const alternateGreetings = dataObj.alternate_greetings || [];
-                const personality = extractPersonalityDeep(dataObj);
+                const personality = extractPersonalityDeep(cardData);
                 const worldbook = dataObj.character_book || null;
                 const regexScripts = dataObj.extensions?.regex_scripts || null;
 
@@ -381,7 +380,7 @@
                     cardData: json, rawText: text, createdAt: Date.now(),
                     firstMes: dataObj.first_mes || '',
                     alternateGreetings: dataObj.alternate_greetings || [],
-                    personality: extractPersonalityDeep(dataObj),
+                    personality: extractPersonalityDeep(json),
                     worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null),
                     regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null)
                 };
@@ -406,26 +405,49 @@
             }
         }
 
-        // Deep Personality Extractor: Handles raw string, escaped JSON string, or nested description
-        function extractPersonalityDeep(dataObj) {
-            if (!dataObj) return '无人设设定';
-            let p = dataObj.personality || dataObj.description || '';
+        // Comprehensive Personality Extractor: Recursively searches description, personality, System Prompt, and unescapes stringified JSON
+        function extractPersonalityDeep(rootObj) {
+            if (!rootObj) return '无人设设定';
+
+            const d = rootObj.data || rootObj;
             
-            // If string is stringified JSON (like screenshot 1)
-            if (typeof p === 'string' && (p.trim().startsWith('{') || p.trim().startsWith('"{'))) {
-                try {
-                    // Unquote if doubly stringified
-                    let cleanJsonStr = p.replace(/^"/, '').replace(/"$/, '').replace(/\\"/g, '"');
-                    const parsed = JSON.parse(cleanJsonStr);
-                    p = parsed.description || parsed.personality || p;
-                } catch(e){}
+            // Priority list of fields
+            let candidates = [
+                d.description,
+                d.personality,
+                d.scenario,
+                d.system_prompt,
+                rootObj.description,
+                rootObj.personality
+            ].filter(Boolean);
+
+            if (candidates.length === 0) return '无人设设定';
+
+            let rawText = candidates[0];
+
+            // If stringified JSON (like {"name":"...", "description":"..."})
+            if (typeof rawText === 'string') {
+                let trimmed = rawText.trim();
+                if (trimmed.startsWith('{') || trimmed.startsWith('"{')) {
+                    try {
+                        let cleanStr = trimmed.replace(/^"/, '').replace(/"$/, '').replace(/\\"/g, '"');
+                        let parsed = JSON.parse(cleanStr);
+                        if (parsed.description) rawText = parsed.description;
+                        else if (parsed.personality) rawText = parsed.personality;
+                        else if (parsed.base_info) rawText = parsed.base_info;
+                    } catch(e){}
+                }
             }
 
-            if (typeof p === 'object') {
-                p = JSON.stringify(p, null, 2);
+            if (typeof rawText === 'object') {
+                rawText = JSON.stringify(rawText, null, 2);
             }
 
-            return String(p).replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+            return String(rawText)
+                .replace(/\\r\\n/g, '\n')
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
         }
 
         function extractCharaChunk(arrayBuffer) {
@@ -544,8 +566,13 @@
             document.getElementById('detailView').classList.remove('hidden');
             document.getElementById('detailView').classList.add('flex');
 
-            // Personality
-            document.getElementById('overviewPersonalityText').innerText = item.personality || '无纯人设设定';
+            // Fallback Re-extraction in case old cached item has missing personality
+            let pText = item.personality;
+            if (!pText || pText === '无人设设定') {
+                pText = extractPersonalityDeep(item.cardData || {});
+            }
+
+            document.getElementById('overviewPersonalityText').innerText = pText;
 
             // Reset Greetings Collapse State
             greetingsExpanded = false;
@@ -731,7 +758,7 @@
             }
         }
 
-        // Render Regex Entries List (EXACT SCREENSHOT 2 STYLE MATCH)
+        // Render Regex Entries List
         function renderRegexEntries() {
             const container = document.getElementById('regexEntriesList');
             container.innerHTML = '';
@@ -749,7 +776,6 @@
                 card.className = "wb-card-container space-y-3";
 
                 card.innerHTML = `
-                    <!-- Header -->
                     <div class="flex items-center justify-between pb-2 border-b border-purple-100">
                         <div class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
                             <i data-lucide="code" class="w-3.5 h-3.5 text-purple-600"></i>
@@ -765,7 +791,6 @@
                         </div>
                     </div>
 
-                    <!-- FIND Input Box (Exact Screenshot 2) -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="text-[11px] font-semibold text-slate-400">查找正则 (Find Regex)</label>
@@ -775,7 +800,6 @@
                         </div>
                     </div>
 
-                    <!-- REPLACE Input Box with $1 $2 Pill Badges (Exact Screenshot 2) -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="text-[11px] font-semibold text-slate-400">替换文本 (Replace String)</label>
