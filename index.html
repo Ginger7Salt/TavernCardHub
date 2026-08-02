@@ -229,7 +229,7 @@
                 <div class="flex items-center justify-between border-b border-amber-100 pb-2">
                     <div class="flex items-center gap-2">
                         <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
-                        <span class="text-xs font-bold text-amber-900">表情包点选拼接导出面板</span>
+                        <span class="text-xs font-bold text-amber-900">表情包快捷粘贴解析 & 点选导出</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="selectAllEmojis(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选</button>
@@ -242,8 +242,23 @@
                     </div>
                 </div>
 
+                <!-- Direct Paste Box for Emojis Import -->
+                <div class="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                            <i data-lucide="clipboard-paste" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <span>直接粘贴文本文本框导入:</span>
+                        </label>
+                        <button onclick="parseAndSavePastedEmojiText()" class="px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold shadow-sm shadow-amber-200 transition flex items-center gap-1">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            <span>解析并加入库</span>
+                        </button>
+                    </div>
+                    <textarea id="emojiPasteInput" placeholder="直接粘贴任意格式表情包文本，例如：&#10;名字：https://example.com/a.jpg&#10;名字 https://example.com/b.png&#10;https://example.com/c.jpeg" class="w-full h-20 bg-slate-50 border border-amber-100 rounded-lg p-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-amber-500 custom-scrollbar"></textarea>
+                </div>
+
                 <!-- Point & Click Variables Selector -->
-                <div class="space-y-2">
+                <div class="space-y-2 pt-1">
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="text-[11px] font-semibold text-slate-500">点击添加变量:</span>
                         <button onclick="appendEmojiVariable('{name}')" class="variable-chip bg-amber-100 text-amber-800 hover:bg-amber-200">
@@ -463,9 +478,53 @@
                 store.createIndex('category', 'category', { unique: false });
             }
         };
-        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); };
+        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); setupGlobalPasteListener(); };
 
         function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
+
+        // Setup Global Paste Listener for Emojis & Images
+        function setupGlobalPasteListener() {
+            window.addEventListener('paste', async (e) => {
+                // If focus is in text input/textarea, let default paste happen
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+                if (currentTab !== 'emojis') return;
+
+                const text = e.clipboardData.getData('text');
+                if (text && text.trim()) {
+                    const parsed = parseEmojiTextLines(text);
+                    if (parsed.length > 0) {
+                        e.preventDefault();
+                        for (let item of parsed) {
+                            const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                            await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
+                        }
+                        updateBadges(); renderItems();
+                        showToast('📋', `从剪贴板成功粘贴并导入 ${parsed.length} 个表情包！`);
+                    }
+                }
+            });
+        }
+
+        async function parseAndSavePastedEmojiText() {
+            const input = document.getElementById('emojiPasteInput');
+            const text = input ? input.value.trim() : '';
+            if (!text) {
+                showToast('ℹ️', '请先在文本框粘贴表情包内容');
+                return;
+            }
+            const parsed = parseEmojiTextLines(text);
+            if (parsed.length === 0) {
+                showToast('⚠️', '未识别到包含 http/https 的表情图片链接！');
+                return;
+            }
+            for (let item of parsed) {
+                const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
+            }
+            input.value = '';
+            updateBadges(); renderItems();
+            showToast('🎉', `成功成功解析并添加 ${parsed.length} 个表情包到库！`);
+        }
 
         document.getElementById('fileInput').addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
