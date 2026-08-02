@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>陆浔 - 酒馆卡片与资产管理</title>
+    <title>酒馆资产工坊 - TavernCardHub</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -39,17 +39,14 @@
             border-color: #7c3aed;
             box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
         }
-        .entry-card {
+        /* Style matching 3rd screenshot */
+        .wb-card-container {
             background: #ffffff;
-            border: 1px solid #e2e8f0;
+            border: 1.5px solid #a855f7;
             border-radius: 1rem;
-            padding: 0.875rem 1rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-            transition: all 0.2s;
-        }
-        .entry-card:hover {
-            border-color: #c4b5fd;
+            padding: 0.875rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08);
         }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -68,7 +65,7 @@
             <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
-            <h1 id="pageTitle" class="font-bold text-base text-slate-800 tracking-tight">陆浔</h1>
+            <h1 id="pageTitle" class="font-bold text-base text-slate-800 tracking-tight">角色资产工坊</h1>
         </div>
 
         <div class="flex items-center space-x-2">
@@ -170,7 +167,7 @@
             </div>
         </div>
 
-        <!-- Section 2: Detail View (Replaces grid when selected) -->
+        <!-- Section 2: Detail View -->
         <div id="detailView" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
             
             <!-- Detail Header & Secondary Tabs -->
@@ -207,13 +204,8 @@
             <!-- Detail Sub-Views Container -->
             <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 
-                <!-- Sub-tab 1: Character Setting & Alternate First Messages -->
+                <!-- Sub-tab 1: Pure Personality & Collapsible Greetings -->
                 <div id="subview-overview" class="space-y-4">
-                    <!-- Cover Image if exists -->
-                    <div id="overviewCoverBox" class="bg-white border border-slate-200 rounded-2xl p-3 flex justify-center shadow-xs hidden">
-                        <img id="overviewImage" src="" class="max-h-64 rounded-xl object-contain shadow-xs">
-                    </div>
-
                     <!-- Pure Character Personality Setting -->
                     <div class="ui-card p-4 space-y-2">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -228,27 +220,27 @@
                         <div id="overviewPersonalityText" class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans max-h-96 overflow-y-auto custom-scrollbar">无纯人设设定</div>
                     </div>
 
-                    <!-- First Message & Alternate Greetings List -->
+                    <!-- Collapsible First Message & Alternate Greetings -->
                     <div class="ui-card p-4 space-y-3">
-                        <div class="text-xs font-bold text-purple-600 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
-                            <i data-lucide="message-square" class="w-4 h-4"></i>
-                            <span>开场白与备用开场白 (Greetings)</span>
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span>开场白与备用开场白</span>
+                            </div>
+                            <button onclick="toggleGreetingsCollapse()" id="greetingsToggleBtn" class="text-xs text-purple-600 font-semibold flex items-center gap-1">
+                                <span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                            </button>
                         </div>
-                        <div id="overviewGreetingsList" class="space-y-3">
+                        <div id="overviewGreetingsList" class="space-y-3 hidden">
                             <!-- Greetings dynamically populated -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Sub-tab 2: Worldbook Entry Card List -->
+                <!-- Sub-tab 2: Worldbook List View (Exact Match to 3rd Screenshot Style) -->
                 <div id="subview-worldbook" class="space-y-4 hidden">
-                    <div class="ui-card p-4 flex items-center justify-between">
-                        <div>
-                            <div class="text-[11px] font-semibold text-slate-400">世界书名称</div>
-                            <div id="wbTitleText" class="text-base font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                                <span class="text-rose-500">💢</span> <span id="wbNameDisplay">默认世界书</span>
-                            </div>
-                        </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">世界书条目列表</div>
                         <button onclick="addNewEntry()" class="px-3 py-1.5 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition flex items-center gap-1">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             <span>新增条目</span>
@@ -256,23 +248,14 @@
                     </div>
 
                     <!-- Entries List Container -->
-                    <div id="wbEntriesList" class="space-y-2.5">
-                        <!-- Entries dynamically added here -->
+                    <div id="wbEntriesList" class="space-y-3">
+                        <!-- Entries dynamically added here with 3rd screenshot style -->
                     </div>
                 </div>
 
-                <!-- Sub-tab 3: Regex Entry Card List -->
+                <!-- Sub-tab 3: Regex List View -->
                 <div id="subview-regex" class="space-y-4 hidden">
-                    <div class="ui-card p-4 flex items-center justify-between">
-                        <div>
-                            <div class="text-[11px] font-semibold text-slate-400">酒馆正则规则</div>
-                            <div class="text-base font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                                ⚡ 正则替换表达列表
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Regex List Container -->
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">酒馆正则规则</div>
                     <div id="regexEntriesList" class="space-y-2.5">
                         <!-- Regex entries dynamically added here -->
                     </div>
@@ -283,32 +266,6 @@
 
     </main>
 
-    <!-- Entry Edit Modal (Popup for editing specific worldbook entry) -->
-    <div id="entryEditModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-bold text-sm text-slate-800">编辑世界书词条</h3>
-                <button onclick="closeEntryModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div class="p-4 space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">触发关键词 (Keys, 逗号分隔)</label>
-                    <input type="text" id="modalEntryKeys" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:border-purple-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">词条内容 (Content)</label>
-                    <textarea id="modalEntryContent" class="w-full h-48 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-purple-500 custom-scrollbar"></textarea>
-                </div>
-            </div>
-            <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button onclick="closeEntryModal()" class="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-200/60">取消</button>
-                <button onclick="saveEntryChanges()" class="px-4 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-sm hover:bg-purple-700">保存修改</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Application JavaScript Core -->
     <script>
         lucide.createIcons();
@@ -316,7 +273,7 @@
         let db;
         let currentTab = 'cards';
         let currentItem = null;
-        let editingEntryIndex = -1;
+        let greetingsExpanded = false;
 
         function toggleSidebar() {
             const drawer = document.getElementById('sidebarDrawer');
@@ -381,7 +338,7 @@
                 const name = dataObj.name || file.name.replace('.png', '');
                 const firstMes = dataObj.first_mes || '';
                 const alternateGreetings = dataObj.alternate_greetings || [];
-                const personality = dataObj.personality || dataObj.description || '';
+                const personality = cleanPersonality(dataObj.personality || dataObj.description || '');
                 const worldbook = dataObj.character_book || null;
                 const regexScripts = dataObj.extensions?.regex_scripts || null;
 
@@ -418,7 +375,7 @@
                     cardData: json, rawText: text, createdAt: Date.now(),
                     firstMes: dataObj.first_mes || '',
                     alternateGreetings: dataObj.alternate_greetings || [],
-                    personality: dataObj.personality || dataObj.description || '',
+                    personality: cleanPersonality(dataObj.personality || dataObj.description || ''),
                     worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null),
                     regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null)
                 };
@@ -441,6 +398,20 @@
                 };
                 await saveAsset(asset);
             }
+        }
+
+        // Helper to strip escaped json strings and unescape \r\n
+        function cleanPersonality(str) {
+            if (!str) return '无人设设定';
+            let cleaned = str;
+            // If raw json escaped string, parse or replace
+            if (cleaned.startsWith('{"name"') || cleaned.startsWith('{ "name"')) {
+                try {
+                    const parsed = JSON.parse(cleaned);
+                    cleaned = parsed.description || parsed.personality || cleaned;
+                } catch(e){}
+            }
+            return cleaned.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
         }
 
         function extractCharaChunk(arrayBuffer) {
@@ -524,27 +495,27 @@
                 return;
             }
 
+            // Cards Grid View: ONLY Image and Name as requested
             filtered.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "ui-card p-3.5 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
+                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
                 card.onclick = () => openDetailView(item);
 
                 let coverHtml = '';
                 if (item.imgUrl) {
-                    coverHtml = `<div class="h-36 rounded-lg overflow-hidden bg-slate-100 mb-2.5 border border-slate-100">
+                    coverHtml = `<div class="h-44 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100">
                         <img src="${item.imgUrl}" class="w-full h-full object-cover">
+                    </div>`;
+                } else {
+                    coverHtml = `<div class="h-28 rounded-xl bg-purple-50 mb-2 flex items-center justify-center text-purple-400">
+                        <i data-lucide="user" class="w-8 h-8"></i>
                     </div>`;
                 }
 
                 card.innerHTML = `
                     <div>
                         ${coverHtml}
-                        <h3 class="font-bold text-sm text-slate-800 truncate">${item.name}</h3>
-                        <p class="text-xs text-slate-400 line-clamp-2 mt-1 leading-normal">${item.personality || item.rawText || '无人设卡片'}</p>
-                    </div>
-                    <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[10px] text-slate-400">
-                        <span class="uppercase font-mono font-medium text-purple-600">${item.fileType}</span>
-                        <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+                        <h3 class="font-bold text-sm text-slate-800 text-center truncate py-1">${item.name}</h3>
                     </div>`;
                 container.appendChild(card);
             });
@@ -559,25 +530,33 @@
             document.getElementById('detailView').classList.remove('hidden');
             document.getElementById('detailView').classList.add('flex');
 
-            // Cover Image
-            if (item.imgUrl) {
-                document.getElementById('overviewCoverBox').classList.remove('hidden');
-                document.getElementById('overviewImage').src = item.imgUrl;
-            } else {
-                document.getElementById('overviewCoverBox').classList.add('hidden');
-            }
-
             // Personality
-            document.getElementById('overviewPersonalityText').innerText = item.personality || item.cardData?.data?.description || item.cardData?.description || '无纯人设设定';
+            document.getElementById('overviewPersonalityText').innerText = item.personality || '无纯人设设定';
 
-            // Greetings List (Main + Alternate)
+            // Reset Greetings Collapse State
+            greetingsExpanded = false;
+            document.getElementById('overviewGreetingsList').classList.add('hidden');
+            document.getElementById('greetingsToggleBtn').innerHTML = `<span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
+
             renderGreetingsList(item);
-
-            // Worldbook & Regex
             renderWorldbookEntries();
             renderRegexEntries();
 
             switchDetailTab('overview');
+        }
+
+        function toggleGreetingsCollapse() {
+            greetingsExpanded = !greetingsExpanded;
+            const container = document.getElementById('overviewGreetingsList');
+            const btn = document.getElementById('greetingsToggleBtn');
+            if (greetingsExpanded) {
+                container.classList.remove('hidden');
+                btn.innerHTML = `<span>收起</span> <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>`;
+            } else {
+                container.classList.add('hidden');
+                btn.innerHTML = `<span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
+            }
+            lucide.createIcons();
         }
 
         function renderGreetingsList(item) {
@@ -597,17 +576,17 @@
                 return;
             }
 
-            allGreetings.forEach((item, index) => {
+            allGreetings.forEach((gItem, index) => {
                 const box = document.createElement('div');
                 box.className = "bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-1.5";
                 box.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-bold text-purple-600">${item.title}</span>
+                        <span class="text-[11px] font-bold text-purple-600">${gItem.title}</span>
                         <button onclick="copyGreetingText(${index})" class="text-[11px] text-slate-400 hover:text-purple-600 flex items-center gap-1">
                             <i data-lucide="copy" class="w-3 h-3"></i> 复制
                         </button>
                     </div>
-                    <div id="greeting-text-${index}" class="text-xs text-slate-700 leading-relaxed font-sans">${item.text}</div>`;
+                    <div id="greeting-text-${index}" class="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap">${gItem.text}</div>`;
                 container.appendChild(box);
             });
             lucide.createIcons();
@@ -622,7 +601,7 @@
         }
 
         function closeDetailView() {
-            document.getElementById('pageTitle').innerText = '陆浔';
+            document.getElementById('pageTitle').innerText = '角色资产工坊';
             document.getElementById('detailView').classList.add('hidden');
             document.getElementById('detailView').classList.remove('flex');
             document.getElementById('listView').classList.remove('hidden');
@@ -641,15 +620,13 @@
             });
         }
 
-        // Render Worldbook Entries List
+        // Render Worldbook Entries List (MATCHING EXACT 3rd SCREENSHOT STYLE)
         function renderWorldbookEntries() {
             const container = document.getElementById('wbEntriesList');
             container.innerHTML = '';
 
             const wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
             const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
-            const name = wb?.name || currentItem?.name || '默认世界书';
-            document.getElementById('wbNameDisplay').innerText = name;
 
             if (!entries || entries.length === 0) {
                 container.innerHTML = `
@@ -661,35 +638,85 @@
 
             entries.forEach((entry, index) => {
                 const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词');
+                const commentTitle = entry.comment || entry.selectiveLogic || keysText || `词条 #${index + 1}`;
+                
                 const card = document.createElement('div');
-                card.className = "entry-card space-y-2";
+                card.className = "wb-card-container space-y-3";
 
                 card.innerHTML = `
-                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                            <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-300 shrink-0"></i>
+                    <!-- Top Control Line -->
+                    <div class="flex items-center justify-between pb-2 border-b border-purple-100">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-300"></i>
                             <input type="checkbox" ${entry.enabled !== false ? 'checked' : ''} onchange="toggleEntryEnabled(${index})" class="w-4 h-4 text-purple-600 rounded border-slate-300">
-                            <h4 class="font-bold text-xs text-slate-800 truncate">${keysText}</h4>
+                            <button onclick="toggleWbEntryCollapse(${index})" class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                <i data-lucide="chevron-up" id="wb-chevron-${index}" class="w-3.5 h-3.5 text-purple-600"></i>
+                                <span>人设 · ${commentTitle}</span>
+                            </button>
                         </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                            <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}">
                                 ${entry.constant ? '🔵 始终' : '⚪ 条件'}
                             </span>
-                            <button onclick="copyEntryContent(${index})" class="p-1 rounded text-slate-400 hover:text-purple-600 hover:bg-purple-50" title="复制">
+                            <button onclick="copyEntryContent(${index})" class="p-1 rounded text-slate-400 hover:text-purple-600">
                                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="openEntryModal(${index})" class="p-1 rounded text-slate-400 hover:text-purple-600 hover:bg-purple-50" title="编辑">
-                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button onclick="deleteEntry(${index})" class="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="删除">
+                            <button onclick="deleteEntry(${index})" class="p-1 rounded text-slate-400 hover:text-rose-600">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="text-xs text-slate-600 leading-relaxed font-sans whitespace-pre-wrap ${index === 0 ? '' : 'line-clamp-3'}">${entry.content || '空内容'}</div>`;
+
+                    <!-- Collapsible Content Body (Exact 3rd Screenshot Inputs) -->
+                    <div id="wb-body-${index}" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">标题 / 注释</label>
+                            <input type="text" value="${commentTitle}" onchange="updateEntryField(${index}, 'comment', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-purple-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">触发模式</label>
+                            <select onchange="updateEntryField(${index}, 'constant', this.value === 'true')" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-purple-500">
+                                <option value="true" ${entry.constant ? 'selected' : ''}>🔵 始终触发</option>
+                                <option value="false" ${!entry.constant ? 'selected' : ''}>⚪ 条件触发</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[11px] font-semibold text-slate-400">内容</label>
+                                <button onclick="copyEntryContent(${index})" class="text-[10px] text-purple-600 font-semibold flex items-center gap-0.5">
+                                    <i data-lucide="copy" class="w-3 h-3"></i> 复制
+                                </button>
+                            </div>
+                            <textarea onchange="updateEntryField(${index}, 'content', this.value)" class="w-full h-36 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-purple-500 custom-scrollbar">${entry.content || ''}</textarea>
+                        </div>
+                    </div>`;
                 container.appendChild(card);
             });
             lucide.createIcons();
+        }
+
+        function toggleWbEntryCollapse(index) {
+            const body = document.getElementById(`wb-body-${index}`);
+            const chevron = document.getElementById(`wb-chevron-${index}`);
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                chevron.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                body.classList.add('hidden');
+                chevron.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        }
+
+        async function updateEntryField(index, field, value) {
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) {
+                entries[index][field] = value;
+                await saveAsset(currentItem);
+            }
         }
 
         // Render Regex Entries List
@@ -707,7 +734,7 @@
 
             scripts.forEach((script, idx) => {
                 const card = document.createElement('div');
-                card.className = "entry-card space-y-2";
+                card.className = "ui-card p-3.5 space-y-2";
                 card.innerHTML = `
                     <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
                         <div class="font-bold text-xs text-purple-600 truncate flex items-center gap-1.5">
@@ -718,7 +745,7 @@
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
-                    <div class="text-[11px] font-mono text-slate-600 bg-slate-50 p-2 rounded-lg space-y-1">
+                    <div class="text-[11px] font-mono text-slate-700 bg-slate-50 p-2.5 rounded-xl space-y-1.5">
                         <div><span class="text-slate-400">FIND:</span> ${script.findRegex || '无'}</div>
                         <div><span class="text-slate-400">REPLACE:</span> ${script.replaceString || '无'}</div>
                     </div>`;
@@ -753,49 +780,17 @@
             }
         }
 
-        function openEntryModal(index) {
-            editingEntryIndex = index;
-            const wb = currentItem.worldbook || currentItem.cardData;
-            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
-            const entry = entries[index] || { keys: [], content: '' };
-
-            document.getElementById('modalEntryKeys').value = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '');
-            document.getElementById('modalEntryContent').value = entry.content || '';
-            document.getElementById('entryEditModal').classList.remove('hidden');
-        }
-
-        function closeEntryModal() {
-            document.getElementById('entryEditModal').classList.add('hidden');
-            editingEntryIndex = -1;
-        }
-
-        async function saveEntryChanges() {
-            if (editingEntryIndex === -1) return;
-            const wb = currentItem.worldbook || currentItem.cardData;
-            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
-
-            const keys = document.getElementById('modalEntryKeys').value.split(',').map(k => k.trim()).filter(Boolean);
-            const content = document.getElementById('modalEntryContent').value;
-
-            if (entries[editingEntryIndex]) {
-                entries[editingEntryIndex].keys = keys;
-                entries[editingEntryIndex].content = content;
-                await saveAsset(currentItem);
-                renderWorldbookEntries();
-                closeEntryModal();
-            }
-        }
-
         async function addNewEntry() {
             if (!currentItem) return;
             if (!currentItem.worldbook) currentItem.worldbook = { entries: [] };
             if (!currentItem.worldbook.entries) currentItem.worldbook.entries = [];
 
             currentItem.worldbook.entries.push({
+                comment: '新词条',
                 keys: ['新关键词'],
-                content: '请输入词条设定内容...',
+                content: '',
                 enabled: true,
-                constant: false
+                constant: true
             });
             await saveAsset(currentItem);
             renderWorldbookEntries();
