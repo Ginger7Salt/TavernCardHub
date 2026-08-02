@@ -28,93 +28,96 @@
         .pill-tab {
             padding: 0.5rem 1.25rem;
             border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-size: 0.75rem;
+            font-weight: 600;
             color: #64748b;
+            background: #f1f5f9;
             transition: all 0.2s;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
         }
         .pill-tab.active {
-            background: #7c3aed;
             color: #ffffff;
-            border-color: #7c3aed;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+            background: #7c3aed;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
         .wb-card-container {
             background: #ffffff;
-            border: 1.5px solid #a855f7;
-            border-radius: 1rem;
+            border: 1px solid #f1f5f9;
+            border-radius: 0.875rem;
             padding: 0.875rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        #sidebarDrawer {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .variable-chip {
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
         }
-
-        /* Toast Animation */
-        #toastContainer {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .variable-chip:hover {
+            transform: translateY(-1px);
         }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800">
+<body class="h-screen flex flex-col overflow-hidden bg-slate-50">
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 transform translate-y-[-100%] opacity-0 pointer-events-none transition-all duration-300">
-        <div id="toastBox" class="bg-slate-900/90 text-white backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-2.5 text-xs font-medium">
-            <span id="toastIcon">☁️</span>
-            <span id="toastMessage">消息提示</span>
+    <!-- Toast Notification Floating Container -->
+    <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-[-100%] opacity-0 pointer-events-none">
+        <div class="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs font-medium">
+            <span id="toastIcon">✨</span>
+            <span id="toastMessage">提示信息</span>
         </div>
     </div>
 
-    <!-- Top Navigation Bar -->
-    <header class="h-14 px-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-20 shadow-xs">
-        <div class="flex items-center space-x-3 min-w-0">
-            <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95 shrink-0">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-600 transition">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
-            <h1 id="pageTitle" class="font-bold text-base text-slate-800 tracking-tight truncate">角色资产工坊</h1>
+            <h1 class="font-bold text-base text-slate-800 tracking-tight" id="pageTitle">酒馆资产工坊</h1>
         </div>
-
-        <div class="flex items-center space-x-2 shrink-0">
-            <label class="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 shadow-md shadow-purple-200 active:scale-95">
-                <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>导入资产</span>
+        <div class="flex items-center gap-2">
+            <label class="cursor-pointer px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm shadow-purple-200 transition flex items-center gap-1.5">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                <span>导入文件</span>
                 <input type="file" id="fileInput" multiple accept=".png,.json,.txt,.docx" class="hidden">
             </label>
         </div>
     </header>
 
-    <!-- Drawer Overlay -->
-    <div id="drawerOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    <!-- Main Container -->
+    <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- Sliding Sidebar Drawer -->
-    <aside id="sidebarDrawer" class="fixed top-0 left-0 bottom-0 w-80 bg-white border-r border-slate-200 z-40 p-4 flex flex-col justify-between -translate-x-full shadow-2xl overflow-y-auto custom-scrollbar">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100 px-2">
-                <div class="flex items-center space-x-2">
-                    <div class="p-2 bg-purple-100 text-purple-600 rounded-xl">
-                        <i data-lucide="box" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h2 class="font-bold text-sm text-slate-800">Tavern Card Hub</h2>
-                        <p class="text-[10px] text-slate-400">酒馆角色与世界书工坊</p>
-                    </div>
+    <!-- Drawer Overlay -->
+    <div id="drawerOverlay" onclick="toggleSidebar()" class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-30 transition-opacity opacity-0 pointer-events-none"></div>
+
+    <!-- Sidebar Drawer -->
+    <aside id="sidebarDrawer" class="absolute left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-200 z-40 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 shadow-xl">
+        <div class="space-y-6 overflow-y-auto custom-scrollbar">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center text-white font-bold text-xs">T</div>
+                    <span class="font-bold text-sm text-slate-800">TavernCardHub</span>
                 </div>
-                <button onclick="toggleSidebar()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="toggleSidebar()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <!-- Asset Category Buttons -->
+            <!-- Asset Categories Menu -->
             <div class="space-y-1">
-                <div class="text-[11px] font-semibold text-slate-400 px-3 py-1 uppercase tracking-wider">资产分类</div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">资产分类</div>
                 
                 <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
@@ -126,29 +129,29 @@
 
                 <button onclick="switchTab('worldbooks')" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
-                        <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
+                        <i data-lucide="book-open" class="w-4 h-4 text-indigo-500"></i>
                         <span>世界书 (Worldbooks)</span>
                     </div>
                     <span id="badge-worldbooks" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('scenarios')" id="tab-scenarios" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                <button onclick="switchTab('emojis')" id="tab-emojis" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
-                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
-                        <span>小剧场 (Scenarios)</span>
+                        <i data-lucide="smile" class="w-4 h-4 text-amber-500"></i>
+                        <span>表情包 (Emojis)</span>
                     </div>
-                    <span id="badge-scenarios" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                    <span id="badge-emojis" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
                 </button>
 
                 <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
-                        <i data-lucide="code-2" class="w-4 h-4 text-rose-500"></i>
+                        <i data-lucide="code" class="w-4 h-4 text-emerald-500"></i>
                         <span>酒馆正则 (Regex)</span>
                     </div>
                     <span id="badge-regex" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
+                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="file-text" class="w-4 h-4 text-sky-500"></i>
                         <span>文档/文本 (Docs)</span>
@@ -162,7 +165,7 @@
                 <div class="flex items-center justify-between">
                     <button onclick="toggleCloudConfigCollapse()" class="text-xs font-bold text-purple-700 flex items-center gap-1.5">
                         <i data-lucide="cloud" class="w-4 h-4 text-purple-600"></i>
-                        <span>☁️ Supabase 云端备份设置</span>
+                        <span>⚡ 增量云端备份设置</span>
                         <i data-lucide="chevron-down" id="cloudConfigChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
                     </button>
                     <span id="cloudStatusBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">未配置</span>
@@ -178,11 +181,12 @@
                         <input type="password" id="cfgSupabaseKey" placeholder="sb_publishable_... 或 eyJhbGci..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
                     </div>
                     <div class="flex items-center justify-between gap-1.5 pt-1">
-                        <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-700 transition flex-1">保存云端配置</button>
-                        <button onclick="manualCloudSync()" class="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-[10px] font-semibold hover:bg-purple-200 transition">手动同步</button>
-                        <button onclick="restoreFromCloud()" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-semibold hover:bg-emerald-200 transition">云端恢复</button>
+                        <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-700 transition flex-1">保存配置</button>
+                        <button onclick="manualIncrementalSync()" class="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-[10px] font-semibold hover:bg-purple-200 transition">⚡ 增量同步</button>
+                        <button onclick="restoreFromCloudIncremental()" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-[10px] font-semibold hover:bg-emerald-200 transition">🔄 增量恢复</button>
                     </div>
 
+                    <!-- Setup Guide -->
                     <div class="bg-white/80 border border-purple-100 rounded-xl p-2.5 space-y-1.5 text-[10px] text-slate-600 leading-normal">
                         <div class="font-bold text-purple-700 flex items-center justify-between">
                             <span>📖 部署与建表教程 (小白3步)</span>
@@ -201,23 +205,79 @@
         </div>
 
         <div class="pt-3 border-t border-slate-100 text-center">
-            <p class="text-[10px] text-slate-400">IndexedDB 本地优先 + 可选 Supabase 独立私有云备份</p>
+            <p class="text-[10px] text-slate-400">IndexedDB 本地优先 + Supabase 独立增量云备份</p>
         </div>
     </aside>
 
+    <!-- Main Workspace -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        
+        <!-- Search Bar -->
         <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0">
             <div class="relative flex-1">
                 <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索角色卡、世界书或文档..." class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500 transition">
+                <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索角色卡、世界书、表情包或文档..." class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500 transition">
             </div>
             <span id="itemCountText" class="text-xs text-slate-400 font-medium px-2">共 0 项</span>
         </div>
 
+        <!-- Section 1: Item Grid/List View -->
         <div id="listView" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            
+            <!-- Custom Export Format Builder for Emojis Area -->
+            <div id="emojiExportBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-amber-200 bg-amber-50/30">
+                <div class="flex items-center justify-between border-b border-amber-100 pb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-xs font-bold text-amber-900">表情包点选拼接导出面板</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="selectAllEmojis(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选</button>
+                        <span class="text-slate-300">|</span>
+                        <button onclick="selectAllEmojis(false)" class="text-[11px] text-amber-700 font-medium hover:underline">取消全选</button>
+                        <button onclick="exportSelectedEmojisFormatted()" class="ml-2 px-3 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm shadow-amber-200 transition flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span>复制选中表情包</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Point & Click Variables Selector -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[11px] font-semibold text-slate-500">点击添加变量:</span>
+                        <button onclick="appendEmojiVariable('{name}')" class="variable-chip bg-amber-100 text-amber-800 hover:bg-amber-200">
+                            + {name} 名字
+                        </button>
+                        <button onclick="appendEmojiVariable('{url}')" class="variable-chip bg-blue-100 text-blue-800 hover:bg-blue-200">
+                            + {url} 完整直链
+                        </button>
+                        <button onclick="appendEmojiVariable('{code}')" class="variable-chip bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                            + {code} 短码/文件名
+                        </button>
+                        <button onclick="clearEmojiFormatTokens()" class="text-[10px] text-rose-500 hover:underline ml-auto">
+                            清空拼接
+                        </button>
+                    </div>
+
+                    <!-- Builder Assembly Line -->
+                    <div class="bg-white border border-amber-200 rounded-xl p-2.5 flex items-center gap-2 flex-wrap min-h-[42px]" id="emojiFormatTokensContainer">
+                        <!-- Tokens inserted dynamically -->
+                    </div>
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                        <div class="flex items-center gap-1 truncate">
+                            <span class="font-bold text-amber-700">当前格式预览:</span>
+                            <span id="emojiFormatPreviewText" class="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 truncate"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
         </div>
 
+        <!-- Section 2: Detail View -->
         <div id="detailView" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
             <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex flex-col gap-3">
                 <div class="flex items-center justify-between">
@@ -324,14 +384,19 @@
         let supabaseClient = null;
         let cloudConfigCollapsed = true;
 
-        // Toast Toast System
+        // Emoji Builder State
+        let emojiTokens = [
+            { type: 'var', value: '{name}' },
+            { type: 'sep', value: '：' },
+            { type: 'var', value: '{url}' }
+        ];
+        let selectedEmojiIds = new Set();
+
         function showToast(icon, message, duration = 3000) {
             const container = document.getElementById('toastContainer');
             document.getElementById('toastIcon').innerText = icon;
             document.getElementById('toastMessage').innerText = message;
-            
             container.classList.remove('translate-y-[-100%]', 'opacity-0', 'pointer-events-none');
-            
             setTimeout(() => {
                 container.classList.add('translate-y-[-100%]', 'opacity-0', 'pointer-events-none');
             }, duration);
@@ -398,7 +463,7 @@
                 store.createIndex('category', 'category', { unique: false });
             }
         };
-        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); };
+        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); };
 
         function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
 
@@ -426,11 +491,41 @@
                 const asset = { id, category, name, fileType: 'json', cardData: json, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
                 await saveAsset(asset);
             } else if (ext === 'txt') {
-                const text = await file.text(); await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
+                const text = await file.text();
+                // Check if text is emoji list format
+                const emojiParsed = parseEmojiTextLines(text);
+                if (emojiParsed.length > 0 && currentTab === 'emojis') {
+                    for (let item of emojiParsed) {
+                        const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
+                    }
+                } else {
+                    await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
+                }
             } else if (ext === 'docx') {
                 const arrayBuffer = await file.arrayBuffer(), result = await mammoth.extractRawText({ arrayBuffer });
                 await saveAsset({ id, category: 'docs', name: file.name, fileType: 'docx', rawText: result.value, rawBuffer: arrayBuffer, createdAt: Date.now() });
             }
+        }
+
+        // Generic Expression/Emoji Line Parser
+        function parseEmojiTextLines(text) {
+            const lines = text.split(/\r?\n/);
+            const results = [];
+            const urlRegex = /(https?:\/\/[^\s]+)/i;
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                const match = line.match(urlRegex);
+                if (match) {
+                    const url = match[1];
+                    let namePart = line.replace(url, '').replace(/[:：\s,，\--]+$/, '').replace(/^[:：\s,，\--]+/, '').trim();
+                    const code = url.split('/').pop().split('?')[0] || '';
+                    if (!namePart) namePart = code || '未命名表情';
+                    results.push({ name: namePart, url, code });
+                }
+            }
+            return results;
         }
 
         function extractPersonalityDeep(rootObj) {
@@ -469,6 +564,7 @@
 
         function saveAsset(asset) {
             return new Promise((resolve) => {
+                asset.createdAt = asset.createdAt || Date.now();
                 const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
                 tx.oncomplete = () => { resolve(); syncAssetToCloudSilent(asset); };
             });
@@ -481,6 +577,7 @@
             });
         }
 
+        // PURE INCREMENTAL CLOUD UPSERT (ONLY SINGLE ITEM)
         async function syncAssetToCloudSilent(asset) {
             if (!supabaseClient) return;
             try {
@@ -492,85 +589,258 @@
                 }
                 const { error } = await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
                 if (!error) {
-                    showToast('☁️', `“${asset.name}”已实时同步备份至云端`);
+                    showToast('⚡', `“${asset.name}”已增量同步至云端`);
                 } else {
-                    showToast('⚠', `云端同步失败: ${error.message}`);
+                    showToast('⚠', `增量同步失败: ${error.message}`);
                 }
             } catch(e){}
         }
 
-        async function manualCloudSync() {
+        // PURE INCREMENTAL MANUAL SYNC
+        async function manualIncrementalSync() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法同步。请在侧边栏填入 URL 与 Key！'); return; }
-            const assets = await getAllAssets(); document.getElementById('cloudStatusBadge').innerText = '同步中...';
-            showToast('☁️', '开始手动全量同步至 Supabase...');
-            let count = 0;
-            for (let a of assets) {
-                await syncAssetToCloudSilent(a);
-                count++;
+            const localAssets = await getAllAssets();
+            document.getElementById('cloudStatusBadge').innerText = '对比中...';
+            showToast('⚡', '正在对比云端与本地资产差异...');
+
+            try {
+                const { data: cloudMetadata, error } = await supabaseClient.from('tavern_assets').select('id, created_at');
+                if (error) { showToast('❌', `查询云端失败: ${error.message}`); return; }
+
+                const cloudMap = new Map();
+                if (cloudMetadata) cloudMetadata.forEach(row => cloudMap.set(row.id, row.created_at));
+
+                let syncedCount = 0;
+                for (let a of localAssets) {
+                    const cloudTimestamp = cloudMap.get(a.id);
+                    if (!cloudTimestamp || (a.createdAt && a.createdAt > cloudTimestamp)) {
+                        await syncAssetToCloudSilent(a);
+                        syncedCount++;
+                    }
+                }
+
+                document.getElementById('cloudStatusBadge').innerText = '同步完成';
+                showToast('✅', `增量同步完成！本次仅上传了 ${syncedCount} 个变动资产`);
+            } catch(e) {
+                showToast('❌', '增量同步失败，请检查网络');
             }
-            document.getElementById('cloudStatusBadge').innerText = '同步完成';
-            showToast('✅', `成功手动备份了 ${count} 个资产到云端！`);
             setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
         }
 
-        async function restoreFromCloud() {
+        // PURE INCREMENTAL CLOUD RESTORE
+        async function restoreFromCloudIncremental() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复。请在侧边栏填入 URL 与 Key！'); return; }
             document.getElementById('cloudStatusBadge').innerText = '恢复中...';
-            showToast('🔄', '正在从 Supabase 云端恢复数据...');
+            showToast('🔄', '正在对比拉取云端新增资产...');
+
             try {
+                const localAssets = await getAllAssets();
+                const localMap = new Map();
+                localAssets.forEach(a => localMap.set(a.id, a.createdAt || 0));
+
                 const { data, error } = await supabaseClient.from('tavern_assets').select('*');
                 if (error) { showToast('❌', `拉取失败: ${error.message}`); return; }
+
                 if (data && data.length > 0) {
+                    let restoredCount = 0;
                     for (let row of data) {
-                        let buffer = null;
-                        if (row.raw_buffer_base64) {
-                            const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
-                            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                            buffer = bytes.buffer;
+                        const localTimestamp = localMap.get(row.id);
+                        const rowTimestamp = row.created_at || 0;
+
+                        if (localTimestamp === undefined || rowTimestamp > localTimestamp) {
+                            let buffer = null;
+                            if (row.raw_buffer_base64) {
+                                const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                buffer = bytes.buffer;
+                            }
+                            const dataObj = row.card_data?.data || row.card_data || {};
+                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                            
+                            const tx = db.transaction('assets', 'readwrite');
+                            tx.objectStore('assets').put(asset);
+                            restoredCount++;
                         }
-                        const dataObj = row.card_data?.data || row.card_data || {};
-                        const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
-                        const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
                     }
                     updateBadges(); renderItems();
-                    showToast('🎉', `拉取完毕！已从云端完整恢复 ${data.length} 项资产！`);
+                    showToast('🎉', `增量拉取完毕！仅恢复了 ${restoredCount} 个新增/变动资产！`);
                 } else {
-                    showToast('ℹ️', '云端数据库目前为空，无备份数据');
+                    showToast('ℹ️', '云端数据库为空');
                 }
-            } catch(e){ showToast('❌', '恢复失败，请检查 Supabase 配置与表结构'); }
+            } catch(e){ showToast('❌', '恢复失败，请检查 Supabase 配置'); }
             document.getElementById('cloudStatusBadge').innerText = '已连接';
         }
 
         async function autoSyncFromCloudSilent() {
             if (!supabaseClient) return;
-            try { const localAssets = await getAllAssets(); if (localAssets.length === 0) await restoreFromCloud(); } catch(e){}
+            try { const localAssets = await getAllAssets(); if (localAssets.length === 0) await restoreFromCloudIncremental(); } catch(e){}
         }
 
         async function updateBadges() {
-            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, scenarios: 0, regex: 0, docs: 0 };
+            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0 };
             assets.forEach(a => { if (counts[a.category] !== undefined) counts[a.category]++; });
             for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
+        }
+
+        // Emoji Format Builder Handlers
+        function appendEmojiVariable(varName) {
+            // Add separator token first if last token was variable
+            if (emojiTokens.length > 0 && emojiTokens[emojiTokens.length - 1].type === 'var') {
+                emojiTokens.push({ type: 'sep', value: '：' });
+            }
+            emojiTokens.push({ type: 'var', value: varName });
+            renderEmojiFormatBuilder();
+        }
+
+        function removeEmojiToken(index) {
+            emojiTokens.splice(index, 1);
+            renderEmojiFormatBuilder();
+        }
+
+        function updateEmojiSepValue(index, val) {
+            if (emojiTokens[index]) emojiTokens[index].value = val;
+            renderEmojiFormatPreview();
+        }
+
+        function clearEmojiFormatTokens() {
+            emojiTokens = [];
+            renderEmojiFormatBuilder();
+        }
+
+        function renderEmojiFormatBuilder() {
+            const container = document.getElementById('emojiFormatTokensContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (emojiTokens.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400 italic">请点击上方胶囊按钮点选变量...</span>`;
+                renderEmojiFormatPreview();
+                return;
+            }
+
+            emojiTokens.forEach((tok, idx) => {
+                if (tok.type === 'var') {
+                    const badge = document.createElement('div');
+                    let bg = 'bg-amber-500 text-white';
+                    if (tok.value === '{url}') bg = 'bg-blue-600 text-white';
+                    if (tok.value === '{code}') bg = 'bg-emerald-600 text-white';
+                    badge.className = `px-2.5 py-1 rounded-lg font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm ${bg}`;
+                    badge.innerHTML = `<span>${tok.value}</span><button onclick="removeEmojiToken(${idx})" class="hover:text-rose-200 text-[10px]">✕</button>`;
+                    container.appendChild(badge);
+                } else if (tok.type === 'sep') {
+                    const sepBox = document.createElement('div');
+                    sepBox.className = "flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-lg px-1.5 py-0.5";
+                    sepBox.innerHTML = `<span class="text-[10px] text-slate-400 font-semibold">符号:</span><input type="text" value="${tok.value}" oninput="updateEmojiSepValue(${idx}, this.value)" class="w-10 bg-white border border-slate-200 rounded px-1 text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-amber-500"><button onclick="removeEmojiToken(${idx})" class="text-slate-400 hover:text-rose-500 text-[10px] px-0.5">✕</button>`;
+                    container.appendChild(sepBox);
+                }
+            });
+            renderEmojiFormatPreview();
+        }
+
+        function renderEmojiFormatPreview() {
+            const el = document.getElementById('emojiFormatPreviewText');
+            if (!el) return;
+            const sample = { name: '败犬表情', url: 'https://catbox.moe/2a9w.jpg', code: '2a9w.jpg' };
+            let out = '';
+            emojiTokens.forEach(tok => {
+                if (tok.type === 'sep') out += tok.value;
+                else if (tok.value === '{name}') out += sample.name;
+                else if (tok.value === '{url}') out += sample.url;
+                else if (tok.value === '{code}') out += sample.code;
+            });
+            el.innerText = out || '(无表达)';
+        }
+
+        function formatEmojiItem(item) {
+            let out = '';
+            const url = item.emojiUrl || item.rawText || '';
+            const code = item.emojiCode || (url.split('/').pop().split('?')[0]) || '';
+            const name = item.name || '表情';
+
+            emojiTokens.forEach(tok => {
+                if (tok.type === 'sep') out += tok.value;
+                else if (tok.value === '{name}') out += name;
+                else if (tok.value === '{url}') out += url;
+                else if (tok.value === '{code}') out += code;
+            });
+            return out;
+        }
+
+        async function exportSelectedEmojisFormatted() {
+            const assets = await getAllAssets();
+            const emojiAssets = assets.filter(a => a.category === 'emojis' && selectedEmojiIds.has(a.id));
+            if (emojiAssets.length === 0) {
+                showToast('ℹ️', '请先勾选需要导出的表情包！');
+                return;
+            }
+            const lines = emojiAssets.map(item => formatEmojiItem(item));
+            const resultText = lines.join('\n');
+            navigator.clipboard.writeText(resultText);
+            showToast('📋', `已复制 ${emojiAssets.length} 个表情包（纯文本无硬编码预设）！`);
+        }
+
+        function toggleEmojiSelection(id) {
+            if (selectedEmojiIds.has(id)) selectedEmojiIds.delete(id);
+            else selectedEmojiIds.add(id);
+        }
+
+        async function selectAllEmojis(select) {
+            const assets = await getAllAssets();
+            const emojiAssets = assets.filter(a => a.category === 'emojis');
+            if (select) {
+                emojiAssets.forEach(a => selectedEmojiIds.add(a.id));
+            } else {
+                selectedEmojiIds.clear();
+            }
+            renderItems();
         }
 
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
-            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword))));
+
+            const builderPanel = document.getElementById('emojiExportBuilderPanel');
+            if (currentTab === 'emojis') {
+                builderPanel.classList.remove('hidden');
+            } else {
+                builderPanel.classList.add('hidden');
+            }
+
+            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword)) || (a.emojiUrl && a.emojiUrl.toLowerCase().includes(keyword))));
             document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
             if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-slate-400"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
 
             filtered.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
-                card.onclick = () => openDetailView(item);
-                let coverHtml = '';
-                if (item.rawBuffer && item.fileType === 'png') {
-                    const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
-                    coverHtml = `<div class="h-44 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
+                
+                if (currentTab === 'emojis') {
+                    const isChecked = selectedEmojiIds.has(item.id);
+                    card.className = "ui-card p-3 flex flex-col justify-between hover:border-amber-300 transition relative group";
+                    const imgUrl = item.emojiUrl || item.rawText || '';
+                    card.innerHTML = `
+                        <div class="absolute top-2 left-2 z-10">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleEmojiSelection('${item.id}')" class="w-4 h-4 text-amber-600 rounded border-slate-300 cursor-pointer">
+                        </div>
+                        <div class="h-32 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100 flex items-center justify-center p-1">
+                            <img src="${imgUrl}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/150x150/f1f5f9/94a3b8?text=图片失效'">
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-xs text-slate-800 text-center truncate px-1">${item.name}</h3>
+                            <p class="text-[10px] text-slate-400 font-mono text-center truncate pt-0.5">${item.emojiUrl || ''}</p>
+                        </div>
+                    `;
                 } else {
-                    coverHtml = `<div class="h-28 rounded-xl bg-purple-50 mb-2 flex items-center justify-center text-purple-400"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-8 h-8"></i></div>`;
+                    card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
+                    card.onclick = () => openDetailView(item);
+                    let coverHtml = '';
+                    if (item.rawBuffer && item.fileType === 'png') {
+                        const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
+                        coverHtml = `<div class="h-44 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
+                    } else {
+                        coverHtml = `<div class="h-28 rounded-xl bg-purple-50 mb-2 flex items-center justify-center text-purple-400"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-8 h-8"></i></div>`;
+                    }
+                    card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-slate-800 text-center truncate py-1">${item.name}</h3></div>`;
                 }
-                card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-slate-800 text-center truncate py-1">${item.name}</h3></div>`;
                 container.appendChild(card);
             });
             lucide.createIcons();
@@ -644,7 +914,7 @@
         }
 
         function closeDetailView() {
-            document.getElementById('pageTitle').innerText = '角色资产工坊'; document.getElementById('detailView').classList.add('hidden'); document.getElementById('detailView').classList.remove('flex'); document.getElementById('listView').classList.remove('hidden'); currentItem = null;
+            document.getElementById('pageTitle').innerText = '酒馆资产工坊'; document.getElementById('detailView').classList.add('hidden'); document.getElementById('detailView').classList.remove('flex'); document.getElementById('listView').classList.remove('hidden'); currentItem = null;
         }
 
         function switchDetailTab(subtab) {
