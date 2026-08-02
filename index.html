@@ -237,7 +237,7 @@
                     </div>
                 </div>
 
-                <!-- Sub-tab 2: Worldbook List View (Exact Match to 3rd Screenshot Style) -->
+                <!-- Sub-tab 2: Worldbook List View -->
                 <div id="subview-worldbook" class="space-y-4 hidden">
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">世界书条目列表</div>
@@ -249,15 +249,21 @@
 
                     <!-- Entries List Container -->
                     <div id="wbEntriesList" class="space-y-3">
-                        <!-- Entries dynamically added here with 3rd screenshot style -->
+                        <!-- Entries dynamically added here -->
                     </div>
                 </div>
 
-                <!-- Sub-tab 3: Regex List View -->
+                <!-- Sub-tab 3: Regex List View (MATCHING SCREENSHOT 2 EXACTLY) -->
                 <div id="subview-regex" class="space-y-4 hidden">
-                    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">酒馆正则规则</div>
-                    <div id="regexEntriesList" class="space-y-2.5">
-                        <!-- Regex entries dynamically added here -->
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">酒馆正则表达列表</div>
+                        <button onclick="addNewRegexScript()" class="px-3 py-1.5 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>新增正则</span>
+                        </button>
+                    </div>
+                    <div id="regexEntriesList" class="space-y-3">
+                        <!-- Regex entries dynamically added here with screenshot 2 style -->
                     </div>
                 </div>
 
@@ -338,7 +344,7 @@
                 const name = dataObj.name || file.name.replace('.png', '');
                 const firstMes = dataObj.first_mes || '';
                 const alternateGreetings = dataObj.alternate_greetings || [];
-                const personality = cleanPersonality(dataObj.personality || dataObj.description || '');
+                const personality = extractPersonalityDeep(dataObj);
                 const worldbook = dataObj.character_book || null;
                 const regexScripts = dataObj.extensions?.regex_scripts || null;
 
@@ -375,7 +381,7 @@
                     cardData: json, rawText: text, createdAt: Date.now(),
                     firstMes: dataObj.first_mes || '',
                     alternateGreetings: dataObj.alternate_greetings || [],
-                    personality: cleanPersonality(dataObj.personality || dataObj.description || ''),
+                    personality: extractPersonalityDeep(dataObj),
                     worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null),
                     regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null)
                 };
@@ -400,18 +406,26 @@
             }
         }
 
-        // Helper to strip escaped json strings and unescape \r\n
-        function cleanPersonality(str) {
-            if (!str) return '无人设设定';
-            let cleaned = str;
-            // If raw json escaped string, parse or replace
-            if (cleaned.startsWith('{"name"') || cleaned.startsWith('{ "name"')) {
+        // Deep Personality Extractor: Handles raw string, escaped JSON string, or nested description
+        function extractPersonalityDeep(dataObj) {
+            if (!dataObj) return '无人设设定';
+            let p = dataObj.personality || dataObj.description || '';
+            
+            // If string is stringified JSON (like screenshot 1)
+            if (typeof p === 'string' && (p.trim().startsWith('{') || p.trim().startsWith('"{'))) {
                 try {
-                    const parsed = JSON.parse(cleaned);
-                    cleaned = parsed.description || parsed.personality || cleaned;
+                    // Unquote if doubly stringified
+                    let cleanJsonStr = p.replace(/^"/, '').replace(/"$/, '').replace(/\\"/g, '"');
+                    const parsed = JSON.parse(cleanJsonStr);
+                    p = parsed.description || parsed.personality || p;
                 } catch(e){}
             }
-            return cleaned.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+
+            if (typeof p === 'object') {
+                p = JSON.stringify(p, null, 2);
+            }
+
+            return String(p).replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
         }
 
         function extractCharaChunk(arrayBuffer) {
@@ -495,7 +509,7 @@
                 return;
             }
 
-            // Cards Grid View: ONLY Image and Name as requested
+            // Cards Grid View: ONLY Image and Name
             filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
@@ -620,7 +634,7 @@
             });
         }
 
-        // Render Worldbook Entries List (MATCHING EXACT 3rd SCREENSHOT STYLE)
+        // Render Worldbook Entries List
         function renderWorldbookEntries() {
             const container = document.getElementById('wbEntriesList');
             container.innerHTML = '';
@@ -644,7 +658,6 @@
                 card.className = "wb-card-container space-y-3";
 
                 card.innerHTML = `
-                    <!-- Top Control Line -->
                     <div class="flex items-center justify-between pb-2 border-b border-purple-100">
                         <div class="flex items-center gap-2">
                             <i data-lucide="grip-vertical" class="w-4 h-4 text-slate-300"></i>
@@ -667,7 +680,6 @@
                         </div>
                     </div>
 
-                    <!-- Collapsible Content Body (Exact 3rd Screenshot Inputs) -->
                     <div id="wb-body-${index}" class="space-y-3">
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-400 mb-1">标题 / 注释</label>
@@ -719,7 +731,7 @@
             }
         }
 
-        // Render Regex Entries List
+        // Render Regex Entries List (EXACT SCREENSHOT 2 STYLE MATCH)
         function renderRegexEntries() {
             const container = document.getElementById('regexEntriesList');
             container.innerHTML = '';
@@ -734,24 +746,71 @@
 
             scripts.forEach((script, idx) => {
                 const card = document.createElement('div');
-                card.className = "ui-card p-3.5 space-y-2";
+                card.className = "wb-card-container space-y-3";
+
                 card.innerHTML = `
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                        <div class="font-bold text-xs text-purple-600 truncate flex items-center gap-1.5">
-                            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                    <!-- Header -->
+                    <div class="flex items-center justify-between pb-2 border-b border-purple-100">
+                        <div class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                            <i data-lucide="code" class="w-3.5 h-3.5 text-purple-600"></i>
                             <span>${script.scriptName || `正则规则 #${idx + 1}`}</span>
                         </div>
-                        <button onclick="copyRegexScript(${idx})" class="p-1 rounded text-slate-400 hover:text-purple-600 hover:bg-purple-50">
-                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="copyRegexScript(${idx})" class="p-1 rounded text-slate-400 hover:text-purple-600">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteRegexScript(${idx})" class="p-1 rounded text-slate-400 hover:text-rose-600">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="text-[11px] font-mono text-slate-700 bg-slate-50 p-2.5 rounded-xl space-y-1.5">
-                        <div><span class="text-slate-400">FIND:</span> ${script.findRegex || '无'}</div>
-                        <div><span class="text-slate-400">REPLACE:</span> ${script.replaceString || '无'}</div>
+
+                    <!-- FIND Input Box (Exact Screenshot 2) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[11px] font-semibold text-slate-400">查找正则 (Find Regex)</label>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-purple-700 break-all">
+                            ${script.findRegex || ''}
+                        </div>
+                    </div>
+
+                    <!-- REPLACE Input Box with $1 $2 Pill Badges (Exact Screenshot 2) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[11px] font-semibold text-slate-400">替换文本 (Replace String)</label>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-center min-h-[3rem] relative">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-purple-600 text-white font-bold px-3 py-1 rounded-full text-xs shadow-sm">$1</span>
+                                <span class="w-6 h-6 rounded-full bg-slate-200 inline-block"></span>
+                            </div>
+                            <span class="absolute bottom-1 right-2 text-[10px] text-amber-500 font-bold">$2</span>
+                        </div>
                     </div>`;
                 container.appendChild(card);
             });
             lucide.createIcons();
+        }
+
+        async function addNewRegexScript() {
+            if (!currentItem) return;
+            if (!currentItem.regexScripts) currentItem.regexScripts = [];
+            currentItem.regexScripts.push({
+                scriptName: '新正则表达式',
+                findRegex: '/(.*)/gs',
+                replaceString: '$1'
+            });
+            await saveAsset(currentItem);
+            renderRegexEntries();
+        }
+
+        async function deleteRegexScript(idx) {
+            if (currentItem?.regexScripts?.[idx]) {
+                currentItem.regexScripts.splice(idx, 1);
+                await saveAsset(currentItem);
+                renderRegexEntries();
+            }
         }
 
         function copyRegexScript(idx) {
