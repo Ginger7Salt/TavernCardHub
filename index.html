@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tavern Card Hub - 酒馆卡片与文档仓库</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>程妄 - 酒馆卡片与资产管理</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -11,152 +11,319 @@
     <!-- Mammoth.js for docx -->
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .glass-card { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s; }
-        .glass-card:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-2px); }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.6); }
+        :root {
+            --bg-main: #f8fafc;
+            --purple-main: #7c3aed;
+            --purple-light: #f3e8ff;
+            --purple-border: #ddd6fe;
+        }
+        body { 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ui-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .pill-tab {
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .pill-tab.active {
+            background: #7c3aed;
+            color: #ffffff;
+            border-color: #7c3aed;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+        }
+        .entry-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 0.875rem 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.2s;
+        }
+        .entry-card:hover {
+            border-color: #c4b5fd;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Drawer Transition */
+        #sidebarDrawer {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800">
 
-    <!-- Top Navigation -->
-    <header class="glass h-16 px-6 flex items-center justify-between shrink-0 z-20">
+    <!-- Top Navigation Bar -->
+    <header class="h-14 px-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-20 shadow-sm">
         <div class="flex items-center space-x-3">
-            <div class="p-2 bg-indigo-600/30 rounded-xl border border-indigo-500/30 text-indigo-400">
-                <i data-lucide="box" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-lg text-slate-100 flex items-center gap-2">
-                    Tavern Card Hub
-                    <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">V1.0</span>
-                </h1>
-                <p class="text-xs text-slate-400">酒馆角色卡、世界书、正则与文档管理中心</p>
-            </div>
+            <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <h1 id="pageTitle" class="font-bold text-base text-slate-800 tracking-tight">程妄</h1>
         </div>
 
-        <div class="flex items-center space-x-3">
-            <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/20">
-                <i data-lucide="upload" class="w-4 h-4"></i>
+        <div class="flex items-center space-x-2">
+            <label class="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 shadow-md shadow-purple-200 active:scale-95">
+                <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>导入资产</span>
                 <input type="file" id="fileInput" multiple accept=".png,.json,.txt,.docx" class="hidden">
             </label>
         </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar Tabs -->
-        <aside class="w-64 glass border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
-            <div class="space-y-1">
-                <div class="text-xs font-semibold text-slate-500 px-3 py-2 uppercase tracking-wider">资产分类</div>
-                
-                <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/60 transition active">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
-                        <span>角色卡 (Cards)</span>
+    <!-- Drawer Overlay -->
+    <div id="drawerOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <!-- Sliding Sidebar Drawer -->
+    <aside id="sidebarDrawer" class="fixed top-0 left-0 bottom-0 w-72 bg-white border-r border-slate-200 z-40 p-4 flex flex-col justify-between -translate-x-full shadow-2xl">
+        <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4 px-2">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-xl">
+                        <i data-lucide="box" class="w-5 h-5"></i>
                     </div>
-                    <span id="badge-cards" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">0</span>
-                </button>
-
-                <button onclick="switchTab('worldbooks')" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/60 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i>
-                        <span>世界书 (Worldbooks)</span>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">Tavern Card Hub</h2>
+                        <p class="text-[10px] text-slate-400">酒馆角色与世界书工坊</p>
                     </div>
-                    <span id="badge-worldbooks" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">0</span>
-                </button>
-
-                <button onclick="switchTab('scenarios')" id="tab-scenarios" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/60 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
-                        <span>小剧场 (Scenarios)</span>
-                    </div>
-                    <span id="badge-scenarios" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">0</span>
-                </button>
-
-                <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/60 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="code-2" class="w-4 h-4 text-rose-400"></i>
-                        <span>酒馆正则 (Regex)</span>
-                    </div>
-                    <span id="badge-regex" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">0</span>
-                </button>
-
-                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/60 transition">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="file-text" class="w-4 h-4 text-sky-400"></i>
-                        <span>文档/文本 (Docs)</span>
-                    </div>
-                    <span id="badge-docs" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">0</span>
-                </button>
-            </div>
-
-            <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-                数据存储于浏览器 IndexedDB<br>支持纯前端离线运行
-            </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="flex-1 flex flex-col overflow-hidden bg-slate-950/40">
-            <!-- Search & Filter Bar -->
-            <div class="p-4 glass border-b border-slate-800/60 flex items-center justify-between gap-4 shrink-0">
-                <div class="relative flex-1 max-w-md">
-                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索名称、描述或关键词..." class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition">
                 </div>
-                <div class="text-xs text-slate-400" id="itemCountText">加载中...</div>
-            </div>
-
-            <!-- Items Grid -->
-            <div id="itemsContainer" class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 custom-scrollbar">
-                <!-- Dynamically populated -->
-            </div>
-        </main>
-    </div>
-
-    <!-- Detail Modal -->
-    <div id="detailModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-                <div class="flex items-center gap-3">
-                    <span id="modalCategoryBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">分类</span>
-                    <h2 id="modalTitle" class="text-lg font-bold text-slate-100">详情</h2>
-                </div>
-                <button onclick="closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+                <button onclick="toggleSidebar()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <!-- Modal Content -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar" id="modalBody">
-                <!-- Dynamically filled -->
+            <div class="space-y-1">
+                <div class="text-[11px] font-semibold text-slate-400 px-3 py-1 uppercase tracking-wider">资产分类</div>
+                
+                <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="users" class="w-4 h-4 text-purple-600"></i>
+                        <span>角色卡 (Cards)</span>
+                    </div>
+                    <span id="badge-cards" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('worldbooks')" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
+                        <span>世界书 (Worldbooks)</span>
+                    </div>
+                    <span id="badge-worldbooks" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('scenarios')" id="tab-scenarios" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                        <span>小剧场 (Scenarios)</span>
+                    </div>
+                    <span id="badge-scenarios" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="code-2" class="w-4 h-4 text-rose-500"></i>
+                        <span>酒馆正则 (Regex)</span>
+                    </div>
+                    <span id="badge-regex" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+
+                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="file-text" class="w-4 h-4 text-sky-500"></i>
+                        <span>文档/文本 (Docs)</span>
+                    </div>
+                    <span id="badge-docs" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 text-center">
+            <p class="text-[11px] text-slate-400"> IndexedDB 离线持久存储</p>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        
+        <!-- Search Bar -->
+        <div class="p-3 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索角色卡、世界书或设定..." class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-purple-500 transition">
+            </div>
+            <span id="itemCountText" class="text-xs text-slate-400 font-medium px-2">共 0 项</span>
+        </div>
+
+        <!-- Section 1: Item Grid/List View -->
+        <div id="listView" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <!-- Items list -->
+            </div>
+        </div>
+
+        <!-- Section 2: Detail View (Replaces grid when selected) -->
+        <div id="detailView" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
+            
+            <!-- Detail Header & Secondary Tabs -->
+            <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <button onclick="closeDetailView()" class="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-purple-600 transition">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        <span>返回列表</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition" title="删除">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Horizontal Secondary Navigation Pills -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    <button onclick="switchDetailTab('overview')" id="detail-tab-overview" class="pill-tab active flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>概览</span>
+                    </button>
+                    <button onclick="switchDetailTab('settings')" id="detail-tab-settings" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                        <span>设定</span>
+                    </button>
+                    <button onclick="switchDetailTab('worldbook')" id="detail-tab-worldbook" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="globe" class="w-4 h-4"></i>
+                        <span>世界书</span>
+                    </button>
+                    <button onclick="switchDetailTab('regex')" id="detail-tab-regex" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="code" class="w-4 h-4"></i>
+                        <span>酒馆正则</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="p-4 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between shrink-0">
-                <button onclick="deleteCurrentItem()" class="px-4 py-2 rounded-xl text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition flex items-center gap-2">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    <span>删除资产</span>
-                </button>
-                <div class="flex items-center gap-2" id="modalExportActions">
-                    <!-- Dynamic Export Buttons -->
+            <!-- Detail Sub-Views Container -->
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                
+                <!-- Sub-tab 1: Overview (Image & First Message) -->
+                <div id="subview-overview" class="space-y-4">
+                    <div id="overviewCoverBox" class="bg-white border border-slate-200 rounded-2xl p-4 flex justify-center shadow-xs hidden">
+                        <img id="overviewImage" src="" class="max-h-72 rounded-xl object-contain shadow-md">
+                    </div>
+
+                    <div class="ui-card p-4 space-y-2">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">开场白 (First Message)</div>
+                        <div id="overviewFirstMes" class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">无开场白</div>
+                    </div>
                 </div>
+
+                <!-- Sub-tab 2: Settings Text -->
+                <div id="subview-settings" class="space-y-4 hidden">
+                    <div class="ui-card p-4 space-y-2">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">角色完整设定 / JSON</div>
+                        <textarea id="settingsRawText" class="w-full h-96 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-700 focus:outline-none focus:border-purple-500 custom-scrollbar"></textarea>
+                    </div>
+                </div>
+
+                <!-- Sub-tab 3: Worldbook List View (Matching 2nd Image Style) -->
+                <div id="subview-worldbook" class="space-y-4 hidden">
+                    <div class="ui-card p-4 flex items-center justify-between">
+                        <div>
+                            <div class="text-[11px] font-semibold text-slate-400">世界书名称</div>
+                            <div id="wbTitleText" class="text-base font-bold text-slate-800 flex items-center gap-1 mt-0.5">
+                                <span class="text-rose-500">💢</span> <span id="wbNameDisplay">默认世界书</span>
+                            </div>
+                        </div>
+                        <button onclick="addNewEntry()" class="px-3 py-1.5 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>新增条目</span>
+                        </button>
+                    </div>
+
+                    <!-- Entries List Container -->
+                    <div id="wbEntriesList" class="space-y-2.5">
+                        <!-- Entries dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Sub-tab 4: Regex View -->
+                <div id="subview-regex" class="space-y-4 hidden">
+                    <div class="ui-card p-4 space-y-2">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">关联正则表达式</div>
+                        <textarea id="regexRawText" class="w-full h-80 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-700 focus:outline-none focus:border-purple-500 custom-scrollbar"></textarea>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Entry Edit Modal (Popup for editing specific worldbook entry) -->
+    <div id="entryEditModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-sm text-slate-800">编辑世界书词条</h3>
+                <button onclick="closeEntryModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">触发关键词 (Keys, 逗号分隔)</label>
+                    <input type="text" id="modalEntryKeys" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">词条内容 (Content)</label>
+                    <textarea id="modalEntryContent" class="w-full h-48 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-purple-500 custom-scrollbar"></textarea>
+                </div>
+            </div>
+            <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button onclick="closeEntryModal()" class="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-200/60">取消</button>
+                <button onclick="saveEntryChanges()" class="px-4 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-sm hover:bg-purple-700">保存修改</button>
             </div>
         </div>
     </div>
 
-    <!-- Application Logic Script -->
+    <!-- Application JavaScript Core -->
     <script>
-        // Init Lucide
         lucide.createIcons();
 
         let db;
         let currentTab = 'cards';
         let currentItem = null;
+        let editingEntryIndex = -1;
+
+        // Drawer Controls
+        function toggleSidebar() {
+            const drawer = document.getElementById('sidebarDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            const isOpen = !drawer.classList.contains('-translate-x-full');
+
+            if (isOpen) {
+                drawer.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            } else {
+                drawer.classList.remove('-translate-x-full');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+            }
+        }
 
         // Init IndexedDB
         const request = indexedDB.open('TavernCardHubDB', 1);
@@ -175,13 +342,12 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('bg-indigo-600/20', 'text-indigo-300', 'border', 'border-indigo-500/30'));
-            const activeBtn = document.getElementById(`tab-${tab}`);
-            if (activeBtn) activeBtn.classList.add('bg-indigo-600/20', 'text-indigo-300', 'border', 'border-indigo-500/30');
+            closeDetailView();
+            toggleSidebar();
             renderItems();
         }
 
-        // Handle File Input
+        // File Handler
         document.getElementById('fileInput').addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             for (let file of files) {
@@ -266,10 +432,9 @@
             }
         }
 
-        // PNG tEXt Chunk Extractor
         function extractCharaChunk(arrayBuffer) {
             const dataView = new DataView(arrayBuffer);
-            let offset = 8; // Skip PNG Signature
+            let offset = 8;
             while (offset < dataView.byteLength) {
                 const length = dataView.getUint32(offset);
                 const type = String.fromCharCode(
@@ -336,13 +501,13 @@
                 (a.rawText && a.rawText.toLowerCase().includes(keyword))
             ));
 
-            document.getElementById('itemCountText').innerText = `共 ${filtered.length} 个资产`;
+            document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
 
             if (filtered.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-full py-16 text-center text-slate-500">
-                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
-                        <p class="text-sm">暂无资产，支持点击右上角导入 PNG/JSON/TXT/DOCX</p>
+                    <div class="col-span-full py-20 text-center text-slate-400">
+                        <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>
+                        <p class="text-xs">暂无资产，点击右上角“导入资产”添加</p>
                     </div>`;
                 lucide.createIcons();
                 return;
@@ -350,28 +515,24 @@
 
             filtered.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "glass-card rounded-2xl p-4 flex flex-col justify-between cursor-pointer group";
-                card.onclick = () => openModal(item);
+                card.className = "ui-card p-3.5 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
+                card.onclick = () => openDetailView(item);
 
                 let coverHtml = '';
                 if (item.imgUrl) {
-                    coverHtml = `<div class="h-40 rounded-xl overflow-hidden bg-slate-900 mb-3 border border-slate-800">
-                        <img src="${item.imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                    </div>`;
-                } else {
-                    coverHtml = `<div class="h-28 rounded-xl bg-slate-900/60 mb-3 border border-slate-800 flex items-center justify-center text-slate-600">
-                        <i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'code'}" class="w-8 h-8"></i>
+                    coverHtml = `<div class="h-36 rounded-lg overflow-hidden bg-slate-100 mb-2.5 border border-slate-100">
+                        <img src="${item.imgUrl}" class="w-full h-full object-cover">
                     </div>`;
                 }
 
                 card.innerHTML = `
                     <div>
                         ${coverHtml}
-                        <h3 class="font-bold text-sm text-slate-200 truncate group-hover:text-indigo-400 transition">${item.name}</h3>
-                        <p class="text-xs text-slate-400 line-clamp-2 mt-1">${item.firstMes || item.rawText || '暂无文字描述'}</p>
+                        <h3 class="font-bold text-sm text-slate-800 truncate">${item.name}</h3>
+                        <p class="text-xs text-slate-400 line-clamp-2 mt-1 leading-normal">${item.firstMes || item.rawText || '暂无文字描述'}</p>
                     </div>
-                    <div class="flex items-center justify-between mt-4 text-[10px] text-slate-500 border-t border-slate-800/60 pt-2">
-                        <span class="uppercase font-mono">${item.fileType}</span>
+                    <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[10px] text-slate-400">
+                        <span class="uppercase font-mono font-medium text-purple-600">${item.fileType}</span>
                         <span>${new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>`;
                 container.appendChild(card);
@@ -379,99 +540,189 @@
             lucide.createIcons();
         }
 
-        function openModal(item) {
+        // Open Secondary Workspace
+        function openDetailView(item) {
             currentItem = item;
-            document.getElementById('modalTitle').innerText = item.name;
-            document.getElementById('modalCategoryBadge').innerText = item.category.toUpperCase();
+            document.getElementById('pageTitle').innerText = item.name;
+            document.getElementById('listView').classList.add('hidden');
+            document.getElementById('detailView').classList.remove('hidden');
+            document.getElementById('detailView').classList.add('flex');
 
-            const modalBody = document.getElementById('modalBody');
-            const exportActions = document.getElementById('modalExportActions');
-            modalBody.innerHTML = '';
-            exportActions.innerHTML = '';
-
-            // Card Image
+            // Set Overview Data
             if (item.imgUrl) {
-                const imgDiv = document.createElement('div');
-                imgDiv.className = "flex justify-center bg-slate-950 p-4 rounded-xl border border-slate-800";
-                imgDiv.innerHTML = `<img src="${item.imgUrl}" class="max-h-64 rounded-lg object-contain">`;
-                modalBody.appendChild(imgDiv);
+                document.getElementById('overviewCoverBox').classList.remove('hidden');
+                document.getElementById('overviewImage').src = item.imgUrl;
+            } else {
+                document.getElementById('overviewCoverBox').classList.add('hidden');
+            }
+            document.getElementById('overviewFirstMes').innerText = item.firstMes || '无开场白设定';
+            document.getElementById('settingsRawText').value = item.rawText || '';
+            document.getElementById('regexRawText').value = item.regexScripts ? JSON.stringify(item.regexScripts, null, 2) : '关联正则配置';
 
-                const btnDownloadImg = document.createElement('a');
-                btnDownloadImg.href = item.imgUrl;
-                btnDownloadImg.download = `${item.name}.png`;
-                btnDownloadImg.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5 transition";
-                btnDownloadImg.innerHTML = `<i data-lucide="image" class="w-3.5 h-3.5"></i> 导出卡面 PNG`;
-                exportActions.appendChild(btnDownloadImg);
+            // Set Worldbook Data
+            renderWorldbookEntries();
+
+            switchDetailTab('overview');
+        }
+
+        function closeDetailView() {
+            document.getElementById('pageTitle').innerText = '程妄';
+            document.getElementById('detailView').classList.add('hidden');
+            document.getElementById('detailView').classList.remove('flex');
+            document.getElementById('listView').classList.remove('hidden');
+            currentItem = null;
+        }
+
+        function switchDetailTab(subtab) {
+            document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+            const activePill = document.getElementById(`detail-tab-${subtab}`);
+            if (activePill) activePill.classList.add('active');
+
+            ['overview', 'settings', 'worldbook', 'regex'].forEach(st => {
+                const el = document.getElementById(`subview-${st}`);
+                if (st === subtab) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+        }
+
+        // Render Worldbook Entries List (Matching 2nd Screenshot)
+        function renderWorldbookEntries() {
+            const container = document.getElementById('wbEntriesList');
+            container.innerHTML = '';
+
+            const wb = currentItem?.worldbook || currentItem?.cardData?.entries || currentItem?.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            const name = wb?.name || currentItem?.name || '默认世界书';
+            document.getElementById('wbNameDisplay').innerText = name;
+
+            if (!entries || entries.length === 0) {
+                container.innerHTML = `
+                    <div class="py-8 text-center text-slate-400 text-xs">
+                        暂无世界书词条条目，点击右上角“新增条目”创建
+                    </div>`;
+                return;
             }
 
-            // 开场白
-            if (item.firstMes) {
-                const mesBox = document.createElement('div');
-                mesBox.className = "space-y-1.5";
-                mesBox.innerHTML = `
-                    <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">开场白 (First Message)</div>
-                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed max-h-36 overflow-y-auto custom-scrollbar">${item.firstMes}</div>`;
-                modalBody.appendChild(mesBox);
-            }
+            entries.forEach((entry, index) => {
+                const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词');
+                const card = document.createElement('div');
+                card.className = "entry-card";
 
-            // 世界书
-            if (item.worldbook) {
-                const wbBox = document.createElement('div');
-                wbBox.className = "space-y-1.5";
-                wbBox.innerHTML = `
-                    <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">附加世界书 (Worldbook)</div>
-                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap">${JSON.stringify(item.worldbook, null, 2)}</div>`;
-                modalBody.appendChild(wbBox);
-            }
-
-            // 酒馆正则
-            if (item.regexScripts) {
-                const regexBox = document.createElement('div');
-                regexBox.className = "space-y-1.5";
-                regexBox.innerHTML = `
-                    <div class="text-xs font-semibold text-rose-400 uppercase tracking-wider">绑定酒馆正则 (Regex Scripts)</div>
-                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap">${JSON.stringify(item.regexScripts, null, 2)}</div>`;
-                modalBody.appendChild(regexBox);
-            }
-
-            // 原始 JSON / 文本
-            if (item.rawText) {
-                const rawBox = document.createElement('div');
-                rawBox.className = "space-y-1.5";
-                rawBox.innerHTML = `
-                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">完整 JSON / 设定文本</div>
-                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono max-h-48 overflow-y-auto custom-scrollbar whitespace-pre-wrap">${item.rawText}</div>`;
-                modalBody.appendChild(rawBox);
-
-                // Export JSON / Text button
-                const blob = new Blob([item.rawText], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const btnDownloadJson = document.createElement('a');
-                btnDownloadJson.href = url;
-                btnDownloadJson.download = `${item.name}.${item.fileType === 'docx' ? 'txt' : 'json'}`;
-                btnDownloadJson.className = "px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition shadow-md shadow-indigo-600/20";
-                btnDownloadJson.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5"></i> 导出拆分 JSON/TXT`;
-                exportActions.appendChild(btnDownloadJson);
-            }
-
-            document.getElementById('detailModal').classList.remove('hidden');
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                        <div class="text-slate-300 cursor-grab">
+                            <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                        </div>
+                        <input type="checkbox" ${entry.enabled !== false ? 'checked' : ''} onchange="toggleEntryEnabled(${index})" class="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500">
+                        <div class="min-w-0 flex-1 cursor-pointer" onclick="openEntryModal(${index})">
+                            <h4 class="font-bold text-xs text-slate-800 truncate">${keysText}</h4>
+                            <p class="text-[11px] text-slate-400 truncate mt-0.5">${entry.content || '空条目'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-[11px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}">
+                            ${entry.constant ? '🔵 始终' : '⚪ 条件'}
+                        </span>
+                        <button onclick="copyEntryContent(${index})" class="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition" title="复制内容">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteEntry(${index})" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="删除">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>`;
+                container.appendChild(card);
+            });
             lucide.createIcons();
         }
 
-        function closeModal() {
-            document.getElementById('detailModal').classList.add('hidden');
-            currentItem = null;
+        // Toggle entry status
+        async function toggleEntryEnabled(index) {
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) {
+                entries[index].enabled = !entries[index].enabled;
+                await saveAsset(currentItem);
+            }
+        }
+
+        function copyEntryContent(index) {
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) {
+                navigator.clipboard.writeText(entries[index].content || '');
+                alert('词条内容已复制到剪贴板！');
+            }
+        }
+
+        function openEntryModal(index) {
+            editingEntryIndex = index;
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            const entry = entries[index] || { keys: [], content: '' };
+
+            document.getElementById('modalEntryKeys').value = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '');
+            document.getElementById('modalEntryContent').value = entry.content || '';
+            document.getElementById('entryEditModal').classList.remove('hidden');
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryEditModal').classList.add('hidden');
+            editingEntryIndex = -1;
+        }
+
+        async function saveEntryChanges() {
+            if (editingEntryIndex === -1) return;
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+
+            const keys = document.getElementById('modalEntryKeys').value.split(',').map(k => k.trim()).filter(Boolean);
+            const content = document.getElementById('modalEntryContent').value;
+
+            if (entries[editingEntryIndex]) {
+                entries[editingEntryIndex].keys = keys;
+                entries[editingEntryIndex].content = content;
+                await saveAsset(currentItem);
+                renderWorldbookEntries();
+                closeEntryModal();
+            }
+        }
+
+        async function addNewEntry() {
+            if (!currentItem) return;
+            if (!currentItem.worldbook) currentItem.worldbook = { entries: [] };
+            if (!currentItem.worldbook.entries) currentItem.worldbook.entries = [];
+
+            currentItem.worldbook.entries.push({
+                keys: ['新关键词'],
+                content: '请输入词条设定内容...',
+                enabled: true,
+                constant: false
+            });
+            await saveAsset(currentItem);
+            renderWorldbookEntries();
+        }
+
+        async function deleteEntry(index) {
+            const wb = currentItem.worldbook || currentItem.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) {
+                entries.splice(index, 1);
+                await saveAsset(currentItem);
+                renderWorldbookEntries();
+            }
         }
 
         async function deleteCurrentItem() {
             if (!currentItem) return;
-            const tx = db.transaction('assets', 'readwrite');
-            tx.objectStore('assets').delete(currentItem.id);
-            tx.oncomplete = () => {
-                closeModal();
-                updateBadges();
-                renderItems();
-            };
+            if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
+                const tx = db.transaction('assets', 'readwrite');
+                tx.objectStore('assets').delete(currentItem.id);
+                tx.oncomplete = () => {
+                    closeDetailView();
+                    updateBadges();
+                    renderItems();
+                };
+            }
         }
     </script>
 </body>
