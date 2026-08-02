@@ -226,12 +226,20 @@
             
             <!-- Custom Export Format Builder for Emojis Area -->
             <div id="emojiExportBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-amber-200 bg-amber-50/30">
-                <div class="flex items-center justify-between border-b border-amber-100 pb-2">
+                <div class="flex items-center justify-between border-b border-amber-100 pb-2 flex-wrap gap-2">
                     <div class="flex items-center gap-2">
                         <i data-lucide="folder-plus" class="w-4 h-4 text-amber-600"></i>
                         <span class="text-xs font-bold text-amber-900">导入 / 新建表情包合集</span>
                     </div>
-                    <div class="text-[11px] text-amber-700 font-medium">输入名字将所有表情收纳为一个总合包</div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="selectAllEmojiPacksInList(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选当前页合集</button>
+                        <span class="text-slate-300">|</span>
+                        <button onclick="selectAllEmojiPacksInList(false)" class="text-[11px] text-amber-700 font-medium hover:underline">取消全选</button>
+                        <button onclick="batchDeleteSelectedEmojiPacks()" class="ml-2 px-3 py-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm shadow-rose-200 transition flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>一键删除选中合集</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Create Emoji Pack Controls -->
@@ -433,6 +441,7 @@
             { type: 'var', value: '{url}' }
         ];
         let selectedEmojiPackItems = new Set();
+        let selectedEmojiPackIdsInList = new Set();
 
         function showToast(icon, message, duration = 3000) {
             const container = document.getElementById('toastContainer');
@@ -833,7 +842,6 @@
             return out;
         }
 
-        // Export TXT or DOCX for Current Emoji Pack
         async function exportEmojiPack(formatType) {
             if (!currentItem || !currentItem.emojiList) return;
             const list = currentItem.emojiList.filter(em => selectedEmojiPackItems.has(em.id));
@@ -849,7 +857,6 @@
                 downloadText(fullText, `${currentItem.name}_表情包导出.txt`, 'text/plain');
                 showToast('📄', `已成功导出 ${list.length} 个表情为 TXT 文档！`);
             } else if (formatType === 'docx') {
-                // Generate simple HTML-based docx compatible file
                 const docxContent = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                     <head><meta charset='utf-8'><title>${currentItem.name}</title></head>
@@ -880,6 +887,51 @@
             renderEmojiPackGrid();
         }
 
+        // List View Batch Selection & Deletion for Emoji Packs
+        function toggleEmojiPackInListSelection(id, e) {
+            e.stopPropagation();
+            if (selectedEmojiPackIdsInList.has(id)) selectedEmojiPackIdsInList.delete(id);
+            else selectedEmojiPackIdsInList.add(id);
+        }
+
+        async function selectAllEmojiPacksInList(select) {
+            const assets = await getAllAssets();
+            const filtered = assets.filter(a => a.category === 'emojis');
+            if (select) {
+                filtered.forEach(a => selectedEmojiPackIdsInList.add(a.id));
+            } else {
+                selectedEmojiPackIdsInList.clear();
+            }
+            renderItems();
+        }
+
+        async function batchDeleteSelectedEmojiPacks() {
+            if (selectedEmojiPackIdsInList.size === 0) {
+                showToast('ℹ️', '请先勾选要删除的表情包合集！');
+                return;
+            }
+
+            if (confirm(`确定要一次性删除已勾选的 ${selectedEmojiPackIdsInList.size} 个表情包合集吗？`)) {
+                const idsToDelete = Array.from(selectedEmojiPackIdsInList);
+                const tx = db.transaction('assets', 'readwrite');
+                const store = tx.objectStore('assets');
+                idsToDelete.forEach(id => store.delete(id));
+
+                tx.oncomplete = async () => {
+                    if (supabaseClient) {
+                        try {
+                            for (let id of idsToDelete) {
+                                await supabaseClient.from('tavern_assets').delete().eq('id', id);
+                            }
+                        } catch(e){}
+                    }
+                    selectedEmojiPackIdsInList.clear();
+                    updateBadges(); renderItems();
+                    showToast('🗑️', `成功清理并删除了 ${idsToDelete.length} 个表情包合集！`);
+                };
+            }
+        }
+
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
@@ -894,13 +946,18 @@
 
             filtered.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-amber-300 transition active:scale-[0.99]";
+                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-amber-300 transition active:scale-[0.99] relative group";
                 card.onclick = () => openDetailView(item);
 
                 if (currentTab === 'emojis') {
                     const count = item.emojiList ? item.emojiList.length : 0;
                     const previewCover = item.emojiList && item.emojiList[0] ? item.emojiList[0].url : '';
+                    const isChecked = selectedEmojiPackIdsInList.has(item.id);
+
                     card.innerHTML = `
+                        <div class="absolute top-2 left-2 z-10">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="toggleEmojiPackInListSelection('${item.id}', event)" class="w-4 h-4 text-amber-600 rounded border-slate-300 cursor-pointer">
+                        </div>
                         <div>
                             <div class="h-28 rounded-xl bg-amber-50 mb-2 border border-amber-100 flex items-center justify-center overflow-hidden p-1">
                                 ${previewCover ? `<img src="${previewCover}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/150x150/fef3c7/d97706?text=表情合集'">` : `<i data-lucide="smile" class="w-8 h-8 text-amber-500"></i>`}
