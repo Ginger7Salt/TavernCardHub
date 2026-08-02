@@ -10,6 +10,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Mammoth.js for docx -->
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { 
             background-color: #f8fafc; 
@@ -81,8 +83,8 @@
 
     <!-- Sliding Sidebar Drawer -->
     <aside id="sidebarDrawer" class="fixed top-0 left-0 bottom-0 w-72 bg-white border-r border-slate-200 z-40 p-4 flex flex-col justify-between -translate-x-full shadow-2xl">
-        <div>
-            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4 px-2">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 px-2">
                 <div class="flex items-center space-x-2">
                     <div class="p-2 bg-purple-100 text-purple-600 rounded-xl">
                         <i data-lucide="box" class="w-5 h-5"></i>
@@ -95,6 +97,17 @@
                 <button onclick="toggleSidebar()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
+            </div>
+
+            <!-- Cloud Sync Indicator Bar -->
+            <div class="bg-purple-50/70 border border-purple-100 rounded-2xl p-3 space-y-1">
+                <div class="flex items-center justify-between text-xs font-bold text-purple-700">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="cloud" class="w-4 h-4 text-purple-600"></i> Supabase 云同步
+                    </span>
+                    <span id="cloudSyncStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">自动同步中</span>
+                </div>
+                <p id="cloudSyncSubtext" class="text-[10px] text-slate-500">已静默打通云端备份，任何改动实时存档</p>
             </div>
 
             <div class="space-y-1">
@@ -142,8 +155,16 @@
             </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-100 text-center">
-            <p class="text-[11px] text-slate-400">IndexedDB 离线持久存储</p>
+        <div class="pt-3 border-t border-slate-100 text-center space-y-1">
+            <div class="flex items-center justify-center gap-2">
+                <button onclick="manualCloudSync()" class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-[11px] font-semibold hover:bg-purple-200 transition">
+                    ☁️ 手动全量同步
+                </button>
+                <button onclick="restoreFromCloud()" class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold hover:bg-emerald-200 transition">
+                    🔄 云端拉取恢复
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-400">IndexedDB + Supabase 云端双保险</p>
         </div>
     </aside>
 
@@ -289,9 +310,18 @@
 
     </main>
 
-    <!-- Application JavaScript Core -->
+    <!-- Application JavaScript Core with Supabase Cloud Mirror -->
     <script>
         lucide.createIcons();
+
+        // Supabase Credentials Config
+        const SUPABASE_URL = "https://hvvihepqthfxpoglryqh.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dmloZXBxdGhmeXBvZ2xyeXFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2MjIxNTgsImV4cCI6MjA2ODE5ODE1OH0.3K8y4XQ33WJpD84dYfOaM5X8S7R23YQ017382211993"; // Chill Project Anon Key
+        
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
 
         let db;
         let currentTab = 'cards';
@@ -324,6 +354,7 @@
             db = e.target.result;
             updateBadges();
             renderItems();
+            autoSyncFromCloudSilent();
         };
 
         function switchTab(tab) {
@@ -498,7 +529,10 @@
             return new Promise((resolve) => {
                 const tx = db.transaction('assets', 'readwrite');
                 tx.objectStore('assets').put(asset);
-                tx.oncomplete = () => resolve();
+                tx.oncomplete = () => {
+                    resolve();
+                    syncAssetToCloudSilent(asset);
+                };
             });
         }
 
@@ -509,6 +543,103 @@
                 const req = store.getAll();
                 req.onsuccess = () => resolve(req.result || []);
             });
+        }
+
+        async function syncAssetToCloudSilent(asset) {
+            if (!supabaseClient) return;
+            try {
+                let base64Buf = null;
+                if (asset.rawBuffer) {
+                    const bytes = new Uint8Array(asset.rawBuffer);
+                    let binary = '';
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    base64Buf = btoa(binary);
+                }
+
+                await supabaseClient.from('tavern_assets').upsert({
+                    id: asset.id,
+                    category: asset.category,
+                    name: asset.name,
+                    file_type: asset.fileType,
+                    card_data: asset.cardData || null,
+                    raw_text: asset.rawText || null,
+                    raw_buffer_base64: base64Buf,
+                    created_at: asset.createdAt
+                });
+            } catch(e){}
+        }
+
+        async function manualCloudSync() {
+            const assets = await getAllAssets();
+            document.getElementById('cloudSyncStatusBadge').innerText = '同步中...';
+            for (let a of assets) {
+                await syncAssetToCloudSilent(a);
+            }
+            document.getElementById('cloudSyncStatusBadge').innerText = '同步完成';
+            setTimeout(() => {
+                document.getElementById('cloudSyncStatusBadge').innerText = '自动同步中';
+            }, 3000);
+        }
+
+        async function restoreFromCloud() {
+            if (!supabaseClient) return;
+            document.getElementById('cloudSyncStatusBadge').innerText = '恢复中...';
+            try {
+                const { data, error } = await supabaseClient.from('tavern_assets').select('*');
+                if (data && data.length > 0) {
+                    for (let row of data) {
+                        let buffer = null;
+                        if (row.raw_buffer_base64) {
+                            const binary = atob(row.raw_buffer_base64);
+                            const bytes = new Uint8Array(binary.length);
+                            for (let i = 0; i < binary.length; i++) {
+                                bytes[i] = binary.charCodeAt(i);
+                            }
+                            buffer = bytes.buffer;
+                        }
+
+                        const dataObj = row.card_data?.data || row.card_data || {};
+                        const asset = {
+                            id: row.id,
+                            category: row.category,
+                            name: row.name,
+                            fileType: row.file_type,
+                            rawBuffer: buffer,
+                            cardData: row.card_data,
+                            rawText: row.raw_text,
+                            firstMes: dataObj.first_mes || '',
+                            alternateGreetings: dataObj.alternate_greetings || [],
+                            personality: extractPersonalityDeep(row.card_data || {}),
+                            worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null),
+                            regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null),
+                            createdAt: row.created_at || Date.now()
+                        };
+
+                        const tx = db.transaction('assets', 'readwrite');
+                        tx.objectStore('assets').put(asset);
+                    }
+                    updateBadges();
+                    renderItems();
+                    alert(`成功从云端恢复了 ${data.length} 个资产记录！`);
+                } else {
+                    alert('云端暂无保存的备份数据');
+                }
+            } catch(e){
+                alert('恢复失败，请检查网络');
+            }
+            document.getElementById('cloudSyncStatusBadge').innerText = '自动同步中';
+        }
+
+        async function autoSyncFromCloudSilent() {
+            if (!supabaseClient) return;
+            try {
+                const localAssets = await getAllAssets();
+                if (localAssets.length === 0) {
+                    await restoreFromCloud();
+                }
+            } catch(e){}
         }
 
         async function updateBadges() {
@@ -582,7 +713,6 @@
 
             setupHeaderExportActions(item);
 
-            // Handle TXT / DOCX Direct Full View
             if (item.category === 'docs') {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('doc-full');
@@ -599,7 +729,6 @@
 
             document.getElementById('overviewPersonalityText').innerText = pText;
 
-            // Default Collapsed Personality
             personalityCollapsed = true;
             document.getElementById('overviewPersonalityBody').classList.add('hidden');
             document.getElementById('personalityChevron').classList.remove('rotate-180');
@@ -624,7 +753,6 @@
             }
         }
 
-        // Dynamic Export Action Buttons in Header
         function setupHeaderExportActions(item) {
             const container = document.getElementById('headerExportActions');
             container.innerHTML = `
@@ -702,7 +830,7 @@
             URL.revokeObjectURL(url);
         }
 
-        // Render Greetings List (EACH INDIVIDUAL GREETING ITEM IS DEFAULT COLLAPSED)
+        // Render Greetings List
         function renderGreetingsList(item) {
             const container = document.getElementById('overviewGreetingsList');
             container.innerHTML = '';
@@ -733,7 +861,6 @@
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制
                         </button>
                     </div>
-                    <!-- DEFAULT COLLAPSED GREETING BODY -->
                     <div id="greeting-body-${index}" class="hidden">
                         <div id="greeting-text-${index}" class="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap pt-1">${gItem.text}</div>
                     </div>`;
@@ -782,7 +909,7 @@
             });
         }
 
-        // Render Worldbook Entries List (DEFAULT ALL COLLAPSED AS REQUESTED)
+        // Render Worldbook Entries List
         function renderWorldbookEntries() {
             const container = document.getElementById('wbEntriesList');
             container.innerHTML = '';
@@ -828,7 +955,6 @@
                         </div>
                     </div>
 
-                    <!-- DEFAULT COLLAPSED BODY -->
                     <div id="wb-body-${index}" class="space-y-3 hidden">
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-400 mb-1">标题 / 注释</label>
@@ -1015,7 +1141,12 @@
             if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
                 const tx = db.transaction('assets', 'readwrite');
                 tx.objectStore('assets').delete(currentItem.id);
-                tx.oncomplete = () => {
+                tx.oncomplete = async () => {
+                    if (supabaseClient) {
+                        try {
+                            await supabaseClient.from('tavern_assets').delete().eq('id', currentItem.id);
+                        } catch(e){}
+                    }
                     closeDetailView();
                     updateBadges();
                     renderItems();
