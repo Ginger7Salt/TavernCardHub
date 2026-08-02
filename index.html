@@ -169,7 +169,7 @@
         <!-- Section 2: Detail View -->
         <div id="detailView" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
             
-            <!-- Detail Header & Secondary Tabs -->
+            <!-- Detail Header & Secondary Navigation Bar with Independent Greeting Tab -->
             <div class="bg-white border-b border-slate-200 p-3 shrink-0 flex flex-col gap-3">
                 <div class="flex items-center justify-between">
                     <button onclick="closeDetailView()" class="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-purple-600 transition">
@@ -183,11 +183,15 @@
                     </div>
                 </div>
 
-                <!-- Horizontal Secondary Navigation Pills -->
+                <!-- Secondary Navigation Pills with "开场白" Pill -->
                 <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
                     <button onclick="switchDetailTab('overview')" id="detail-tab-overview" class="pill-tab active flex items-center gap-1.5 shrink-0">
                         <i data-lucide="user-check" class="w-4 h-4"></i>
-                        <span>设定</span>
+                        <span>人设</span>
+                    </button>
+                    <button onclick="switchDetailTab('greetings')" id="detail-tab-greetings" class="pill-tab flex items-center gap-1.5 shrink-0">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <span>开场白</span>
                     </button>
                     <button onclick="switchDetailTab('worldbook')" id="detail-tab-worldbook" class="pill-tab flex items-center gap-1.5 shrink-0">
                         <i data-lucide="globe" class="w-4 h-4"></i>
@@ -203,9 +207,8 @@
             <!-- Detail Sub-Views Container -->
             <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 
-                <!-- Sub-tab 1: Pure Personality & Collapsible Greetings -->
+                <!-- Sub-tab 1: Pure Character Personality -->
                 <div id="subview-overview" class="space-y-4">
-                    <!-- Pure Character Personality Setting -->
                     <div class="ui-card p-4 space-y-2">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                             <div class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -218,25 +221,19 @@
                         </div>
                         <div id="overviewPersonalityText" class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans max-h-96 overflow-y-auto custom-scrollbar">无纯人设设定</div>
                     </div>
+                </div>
 
-                    <!-- Collapsible First Message & Alternate Greetings -->
-                    <div class="ui-card p-4 space-y-3">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <div class="text-xs font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
-                                <i data-lucide="message-square" class="w-4 h-4"></i>
-                                <span>开场白与备用开场白</span>
-                            </div>
-                            <button onclick="toggleGreetingsCollapse()" id="greetingsToggleBtn" class="text-xs text-purple-600 font-semibold flex items-center gap-1">
-                                <span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                        <div id="overviewGreetingsList" class="space-y-3 hidden">
-                            <!-- Greetings dynamically populated -->
-                        </div>
+                <!-- Sub-tab 2: Dedicated Independent Greetings List View -->
+                <div id="subview-greetings" class="space-y-4 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">开场白与备用开场白列表</div>
+                    </div>
+                    <div id="overviewGreetingsList" class="space-y-3">
+                        <!-- Greetings dynamically populated -->
                     </div>
                 </div>
 
-                <!-- Sub-tab 2: Worldbook List View -->
+                <!-- Sub-tab 3: Worldbook List View -->
                 <div id="subview-worldbook" class="space-y-4 hidden">
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">世界书条目列表</div>
@@ -252,7 +249,7 @@
                     </div>
                 </div>
 
-                <!-- Sub-tab 3: Regex List View -->
+                <!-- Sub-tab 4: Regex List View -->
                 <div id="subview-regex" class="space-y-4 hidden">
                     <div class="flex items-center justify-between mb-2">
                         <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">酒馆正则表达列表</div>
@@ -278,7 +275,6 @@
         let db;
         let currentTab = 'cards';
         let currentItem = null;
-        let greetingsExpanded = false;
 
         function toggleSidebar() {
             const drawer = document.getElementById('sidebarDrawer');
@@ -405,13 +401,12 @@
             }
         }
 
-        // Comprehensive Personality Extractor: Recursively searches description, personality, System Prompt, and unescapes stringified JSON
+        // Deep Personality Extractor: Recursively searches description, personality, System Prompt, and unescapes stringified JSON
         function extractPersonalityDeep(rootObj) {
             if (!rootObj) return '无人设设定';
 
             const d = rootObj.data || rootObj;
             
-            // Priority list of fields
             let candidates = [
                 d.description,
                 d.personality,
@@ -425,7 +420,6 @@
 
             let rawText = candidates[0];
 
-            // If stringified JSON (like {"name":"...", "description":"..."})
             if (typeof rawText === 'string') {
                 let trimmed = rawText.trim();
                 if (trimmed.startsWith('{') || trimmed.startsWith('"{')) {
@@ -531,7 +525,6 @@
                 return;
             }
 
-            // Cards Grid View: ONLY Image and Name
             filtered.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
@@ -566,7 +559,6 @@
             document.getElementById('detailView').classList.remove('hidden');
             document.getElementById('detailView').classList.add('flex');
 
-            // Fallback Re-extraction in case old cached item has missing personality
             let pText = item.personality;
             if (!pText || pText === '无人设设定') {
                 pText = extractPersonalityDeep(item.cardData || {});
@@ -574,30 +566,11 @@
 
             document.getElementById('overviewPersonalityText').innerText = pText;
 
-            // Reset Greetings Collapse State
-            greetingsExpanded = false;
-            document.getElementById('overviewGreetingsList').classList.add('hidden');
-            document.getElementById('greetingsToggleBtn').innerHTML = `<span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
-
             renderGreetingsList(item);
             renderWorldbookEntries();
             renderRegexEntries();
 
             switchDetailTab('overview');
-        }
-
-        function toggleGreetingsCollapse() {
-            greetingsExpanded = !greetingsExpanded;
-            const container = document.getElementById('overviewGreetingsList');
-            const btn = document.getElementById('greetingsToggleBtn');
-            if (greetingsExpanded) {
-                container.classList.remove('hidden');
-                btn.innerHTML = `<span>收起</span> <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>`;
-            } else {
-                container.classList.add('hidden');
-                btn.innerHTML = `<span>点击展开所有</span> <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
-            }
-            lucide.createIcons();
         }
 
         function renderGreetingsList(item) {
@@ -613,18 +586,18 @@
             });
 
             if (allGreetings.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-400">无开场白</div>`;
+                container.innerHTML = `<div class="text-xs text-slate-400 py-8 text-center">无开场白设定</div>`;
                 return;
             }
 
             allGreetings.forEach((gItem, index) => {
                 const box = document.createElement('div');
-                box.className = "bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-1.5";
+                box.className = "bg-white border border-purple-200 rounded-2xl p-4 space-y-2 shadow-xs";
                 box.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-bold text-purple-600">${gItem.title}</span>
-                        <button onclick="copyGreetingText(${index})" class="text-[11px] text-slate-400 hover:text-purple-600 flex items-center gap-1">
-                            <i data-lucide="copy" class="w-3 h-3"></i> 复制
+                    <div class="flex items-center justify-between pb-2 border-b border-purple-100">
+                        <span class="text-xs font-bold text-purple-600">${gItem.title}</span>
+                        <button onclick="copyGreetingText(${index})" class="text-xs text-slate-400 hover:text-purple-600 flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制
                         </button>
                     </div>
                     <div id="greeting-text-${index}" class="text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap">${gItem.text}</div>`;
@@ -654,7 +627,7 @@
             const activePill = document.getElementById(`detail-tab-${subtab}`);
             if (activePill) activePill.classList.add('active');
 
-            ['overview', 'worldbook', 'regex'].forEach(st => {
+            ['overview', 'greetings', 'worldbook', 'regex'].forEach(st => {
                 const el = document.getElementById(`subview-${st}`);
                 if (st === subtab) el.classList.remove('hidden');
                 else el.classList.add('hidden');
