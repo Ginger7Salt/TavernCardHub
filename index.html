@@ -138,7 +138,7 @@
                 <button onclick="switchTab('emojis')" id="tab-emojis" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="smile" class="w-4 h-4 text-amber-500"></i>
-                        <span>表情包 (Emojis)</span>
+                        <span>表情包合集 (Emojis)</span>
                     </div>
                     <span id="badge-emojis" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">0</span>
                 </button>
@@ -228,63 +228,29 @@
             <div id="emojiExportBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-amber-200 bg-amber-50/30">
                 <div class="flex items-center justify-between border-b border-amber-100 pb-2">
                     <div class="flex items-center gap-2">
-                        <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
-                        <span class="text-xs font-bold text-amber-900">表情包快捷粘贴解析 & 点选导出</span>
+                        <i data-lucide="folder-plus" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-xs font-bold text-amber-900">导入 / 新建表情包合集</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="selectAllEmojis(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选</button>
-                        <span class="text-slate-300">|</span>
-                        <button onclick="selectAllEmojis(false)" class="text-[11px] text-amber-700 font-medium hover:underline">取消全选</button>
-                        <button onclick="exportSelectedEmojisFormatted()" class="ml-2 px-3 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm shadow-amber-200 transition flex items-center gap-1">
-                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                            <span>复制选中表情包</span>
-                        </button>
-                    </div>
+                    <div class="text-[11px] text-amber-700 font-medium">输入名字将所有表情收纳为一个总合包</div>
                 </div>
 
-                <!-- Direct Paste Box for Emojis Import -->
-                <div class="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <label class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-                            <i data-lucide="clipboard-paste" class="w-3.5 h-3.5 text-amber-600"></i>
-                            <span>直接粘贴文本文本框导入:</span>
-                        </label>
-                        <button onclick="parseAndSavePastedEmojiText()" class="px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold shadow-sm shadow-amber-200 transition flex items-center gap-1">
-                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                            <span>解析并加入库</span>
-                        </button>
-                    </div>
-                    <textarea id="emojiPasteInput" placeholder="直接粘贴任意格式表情包文本，例如：&#10;名字：https://example.com/a.jpg&#10;名字 https://example.com/b.png&#10;https://example.com/c.jpeg" class="w-full h-20 bg-slate-50 border border-amber-100 rounded-lg p-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-amber-500 custom-scrollbar"></textarea>
-                </div>
-
-                <!-- Point & Click Variables Selector -->
-                <div class="space-y-2 pt-1">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[11px] font-semibold text-slate-500">点击添加变量:</span>
-                        <button onclick="appendEmojiVariable('{name}')" class="variable-chip bg-amber-100 text-amber-800 hover:bg-amber-200">
-                            + {name} 名字
-                        </button>
-                        <button onclick="appendEmojiVariable('{url}')" class="variable-chip bg-blue-100 text-blue-800 hover:bg-blue-200">
-                            + {url} 完整直链
-                        </button>
-                        <button onclick="appendEmojiVariable('{code}')" class="variable-chip bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
-                            + {code} 短码/文件名
-                        </button>
-                        <button onclick="clearEmojiFormatTokens()" class="text-[10px] text-rose-500 hover:underline ml-auto">
-                            清空拼接
-                        </button>
-                    </div>
-
-                    <!-- Builder Assembly Line -->
-                    <div class="bg-white border border-amber-200 rounded-xl p-2.5 flex items-center gap-2 flex-wrap min-h-[42px]" id="emojiFormatTokensContainer">
-                        <!-- Tokens inserted dynamically -->
-                    </div>
-
-                    <div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                        <div class="flex items-center gap-1 truncate">
-                            <span class="font-bold text-amber-700">当前格式预览:</span>
-                            <span id="emojiFormatPreviewText" class="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 truncate"></span>
+                <!-- Create Emoji Pack Controls -->
+                <div class="bg-white border border-amber-200 rounded-xl p-3 space-y-2.5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="md:col-span-1">
+                            <label class="block text-[11px] font-bold text-amber-900 mb-1">合集名称 (表情包名字):</label>
+                            <input type="text" id="emojiPackNameInput" placeholder="例如：猫猫表情包、猫砸表情..." class="w-full bg-slate-50 border border-amber-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-medium">
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-bold text-amber-900 mb-1">粘贴包含直链的文本内容:</label>
+                            <textarea id="emojiPasteInput" placeholder="直接粘贴任意格式文本，例如：&#10;名字：https://example.com/a.jpg&#10;名字 https://example.com/b.png&#10;https://example.com/c.jpeg" class="w-full h-16 bg-slate-50 border border-amber-200 rounded-lg p-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-amber-500 custom-scrollbar"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-0.5">
+                        <button onclick="parseAndSavePastedEmojiPack()" class="px-4 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm shadow-amber-200 transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>生成表情包总合集</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -328,6 +294,67 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                
+                <!-- Subview Emoji Pack Specific Grid View -->
+                <div id="subview-emoji-grid" class="space-y-4 hidden">
+                    <div class="ui-card p-4 space-y-3 border-amber-200 bg-amber-50/20">
+                        <div class="flex items-center justify-between border-b border-amber-100 pb-2 flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
+                                <span class="text-xs font-bold text-amber-900">自定义变量点选与排版导出器</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="selectAllPackEmojis(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选</button>
+                                <span class="text-slate-300">|</span>
+                                <button onclick="selectAllPackEmojis(false)" class="text-[11px] text-amber-700 font-medium hover:underline">取消全选</button>
+                                
+                                <!-- Export Buttons for TXT & DOCX -->
+                                <button onclick="exportEmojiPack('txt')" class="px-2.5 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                    <span>导出 TXT</span>
+                                </button>
+                                <button onclick="exportEmojiPack('docx')" class="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                                    <i data-lucide="file" class="w-3.5 h-3.5"></i>
+                                    <span>导出 DOCX</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Variables Builder -->
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[11px] font-semibold text-slate-500">点击添加变量:</span>
+                                <button onclick="appendEmojiVariable('{name}')" class="variable-chip bg-amber-100 text-amber-800 hover:bg-amber-200">
+                                    + {name} 名字
+                                </button>
+                                <button onclick="appendEmojiVariable('{url}')" class="variable-chip bg-blue-100 text-blue-800 hover:bg-blue-200">
+                                    + {url} 完整直链
+                                </button>
+                                <button onclick="appendEmojiVariable('{code}')" class="variable-chip bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                                    + {code} 短码/文件名
+                                </button>
+                                <button onclick="clearEmojiFormatTokens()" class="text-[10px] text-rose-500 hover:underline ml-auto">
+                                    清空拼接
+                                </button>
+                            </div>
+
+                            <div class="bg-white border border-amber-200 rounded-xl p-2 flex items-center gap-2 flex-wrap min-h-[38px]" id="emojiFormatTokensContainer">
+                                <!-- Dynamic Tokens -->
+                            </div>
+
+                            <div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                                <div class="flex items-center gap-1 truncate">
+                                    <span class="font-bold text-amber-700">样例:</span>
+                                    <span id="emojiFormatPreviewText" class="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 truncate"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emoji Grid View (1 Row 5 Items) -->
+                    <div id="emojiPackGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5"></div>
+                </div>
+
                 <div id="subview-overview" class="space-y-4">
                     <div class="ui-card p-4 space-y-2">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -405,7 +432,7 @@
             { type: 'sep', value: '：' },
             { type: 'var', value: '{url}' }
         ];
-        let selectedEmojiIds = new Set();
+        let selectedEmojiPackItems = new Set();
 
         function showToast(icon, message, duration = 3000) {
             const container = document.getElementById('toastContainer');
@@ -482,10 +509,9 @@
 
         function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
 
-        // Setup Global Paste Listener for Emojis & Images
+        // Setup Global Paste Listener for Emojis
         function setupGlobalPasteListener() {
             window.addEventListener('paste', async (e) => {
-                // If focus is in text input/textarea, let default paste happen
                 if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
                 if (currentTab !== 'emojis') return;
 
@@ -494,36 +520,34 @@
                     const parsed = parseEmojiTextLines(text);
                     if (parsed.length > 0) {
                         e.preventDefault();
-                        for (let item of parsed) {
-                            const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                            await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
-                        }
+                        const packName = '未命名表情合集_' + new Date().toLocaleDateString();
+                        const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: parsed, rawText: text, createdAt: Date.now() });
                         updateBadges(); renderItems();
-                        showToast('📋', `从剪贴板成功粘贴并导入 ${parsed.length} 个表情包！`);
+                        showToast('📋', `已快捷将 ${parsed.length} 个表情收纳为总合集 “${packName}”！`);
                     }
                 }
             });
         }
 
-        async function parseAndSavePastedEmojiText() {
-            const input = document.getElementById('emojiPasteInput');
-            const text = input ? input.value.trim() : '';
-            if (!text) {
-                showToast('ℹ️', '请先在文本框粘贴表情包内容');
-                return;
-            }
+        async function parseAndSavePastedEmojiPack() {
+            const nameInput = document.getElementById('emojiPackNameInput');
+            const textInput = document.getElementById('emojiPasteInput');
+            const packName = nameInput ? nameInput.value.trim() : '';
+            const text = textInput ? textInput.value.trim() : '';
+
+            if (!packName) { showToast('⚠️', '请先填写表情包合集名字！'); return; }
+            if (!text) { showToast('⚠️', '请粘贴包含表情直链的文本！'); return; }
+
             const parsed = parseEmojiTextLines(text);
-            if (parsed.length === 0) {
-                showToast('⚠️', '未识别到包含 http/https 的表情图片链接！');
-                return;
-            }
-            for (let item of parsed) {
-                const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
-            }
-            input.value = '';
+            if (parsed.length === 0) { showToast('⚠️', '未在文本中识别到包含 http/https 的表情链接！'); return; }
+
+            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: parsed, rawText: text, createdAt: Date.now() });
+            
+            nameInput.value = ''; textInput.value = '';
             updateBadges(); renderItems();
-            showToast('🎉', `成功成功解析并添加 ${parsed.length} 个表情包到库！`);
+            showToast('🎉', `成功生成包含 ${parsed.length} 个表情的合集 “${packName}”！`);
         }
 
         document.getElementById('fileInput').addEventListener('change', async (e) => {
@@ -551,13 +575,10 @@
                 await saveAsset(asset);
             } else if (ext === 'txt') {
                 const text = await file.text();
-                // Check if text is emoji list format
                 const emojiParsed = parseEmojiTextLines(text);
                 if (emojiParsed.length > 0 && currentTab === 'emojis') {
-                    for (let item of emojiParsed) {
-                        const emId = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                        await saveAsset({ id: emId, category: 'emojis', name: item.name, fileType: 'txt', rawText: text, emojiUrl: item.url, emojiCode: item.code, createdAt: Date.now() });
-                    }
+                    const packName = file.name.replace('.txt', '');
+                    await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: emojiParsed, rawText: text, createdAt: Date.now() });
                 } else {
                     await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
                 }
@@ -567,21 +588,20 @@
             }
         }
 
-        // Generic Expression/Emoji Line Parser
         function parseEmojiTextLines(text) {
             const lines = text.split(/\r?\n/);
             const results = [];
             const urlRegex = /(https?:\/\/[^\s]+)/i;
-            for (let line of lines) {
-                line = line.trim();
+            for (let idx = 0; idx < lines.length; idx++) {
+                let line = lines[idx].trim();
                 if (!line) continue;
                 const match = line.match(urlRegex);
                 if (match) {
                     const url = match[1];
                     let namePart = line.replace(url, '').replace(/[:：\s,，\--]+$/, '').replace(/^[:：\s,，\--]+/, '').trim();
                     const code = url.split('/').pop().split('?')[0] || '';
-                    if (!namePart) namePart = code || '未命名表情';
-                    results.push({ name: namePart, url, code });
+                    if (!namePart) namePart = code || `表情 #${idx + 1}`;
+                    results.push({ id: 'em_' + idx + '_' + Math.random().toString(36).substr(2, 5), name: namePart, url, code });
                 }
             }
             return results;
@@ -636,7 +656,6 @@
             });
         }
 
-        // PURE INCREMENTAL CLOUD UPSERT (ONLY SINGLE ITEM)
         async function syncAssetToCloudSilent(asset) {
             if (!supabaseClient) return;
             try {
@@ -646,16 +665,11 @@
                     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
                     base64Buf = btoa(binary);
                 }
-                const { error } = await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
-                if (!error) {
-                    showToast('⚡', `“${asset.name}”已增量同步至云端`);
-                } else {
-                    showToast('⚠', `增量同步失败: ${error.message}`);
-                }
+                const { error } = await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || { emojiList: asset.emojiList } || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
+                if (!error) { showToast('⚡', `“${asset.name}”已增量同步至云端`); }
             } catch(e){}
         }
 
-        // PURE INCREMENTAL MANUAL SYNC
         async function manualIncrementalSync() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法同步。请在侧边栏填入 URL 与 Key！'); return; }
             const localAssets = await getAllAssets();
@@ -680,13 +694,10 @@
 
                 document.getElementById('cloudStatusBadge').innerText = '同步完成';
                 showToast('✅', `增量同步完成！本次仅上传了 ${syncedCount} 个变动资产`);
-            } catch(e) {
-                showToast('❌', '增量同步失败，请检查网络');
-            }
+            } catch(e) { showToast('❌', '增量同步失败，请检查网络'); }
             setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
         }
 
-        // PURE INCREMENTAL CLOUD RESTORE
         async function restoreFromCloudIncremental() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复。请在侧边栏填入 URL 与 Key！'); return; }
             document.getElementById('cloudStatusBadge').innerText = '恢复中...';
@@ -714,7 +725,7 @@
                                 buffer = bytes.buffer;
                             }
                             const dataObj = row.card_data?.data || row.card_data || {};
-                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, emojiList: row.card_data?.emojiList || null, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
                             
                             const tx = db.transaction('assets', 'readwrite');
                             tx.objectStore('assets').put(asset);
@@ -723,9 +734,7 @@
                     }
                     updateBadges(); renderItems();
                     showToast('🎉', `增量拉取完毕！仅恢复了 ${restoredCount} 个新增/变动资产！`);
-                } else {
-                    showToast('ℹ️', '云端数据库为空');
-                }
+                } else { showToast('ℹ️', '云端数据库为空'); }
             } catch(e){ showToast('❌', '恢复失败，请检查 Supabase 配置'); }
             document.getElementById('cloudStatusBadge').innerText = '已连接';
         }
@@ -741,9 +750,8 @@
             for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
         }
 
-        // Emoji Format Builder Handlers
+        // Emoji Builder
         function appendEmojiVariable(varName) {
-            // Add separator token first if last token was variable
             if (emojiTokens.length > 0 && emojiTokens[emojiTokens.length - 1].type === 'var') {
                 emojiTokens.push({ type: 'sep', value: '：' });
             }
@@ -783,13 +791,13 @@
                     let bg = 'bg-amber-500 text-white';
                     if (tok.value === '{url}') bg = 'bg-blue-600 text-white';
                     if (tok.value === '{code}') bg = 'bg-emerald-600 text-white';
-                    badge.className = `px-2.5 py-1 rounded-lg font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm ${bg}`;
+                    badge.className = `px-2 py-0.5 rounded-lg font-mono text-[11px] font-bold flex items-center gap-1 shadow-sm ${bg}`;
                     badge.innerHTML = `<span>${tok.value}</span><button onclick="removeEmojiToken(${idx})" class="hover:text-rose-200 text-[10px]">✕</button>`;
                     container.appendChild(badge);
                 } else if (tok.type === 'sep') {
                     const sepBox = document.createElement('div');
                     sepBox.className = "flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-lg px-1.5 py-0.5";
-                    sepBox.innerHTML = `<span class="text-[10px] text-slate-400 font-semibold">符号:</span><input type="text" value="${tok.value}" oninput="updateEmojiSepValue(${idx}, this.value)" class="w-10 bg-white border border-slate-200 rounded px-1 text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-amber-500"><button onclick="removeEmojiToken(${idx})" class="text-slate-400 hover:text-rose-500 text-[10px] px-0.5">✕</button>`;
+                    sepBox.innerHTML = `<span class="text-[10px] text-slate-400 font-semibold">符号:</span><input type="text" value="${tok.value}" oninput="updateEmojiSepValue(${idx}, this.value)" class="w-8 bg-white border border-slate-200 rounded px-1 text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-amber-500"><button onclick="removeEmojiToken(${idx})" class="text-slate-400 hover:text-rose-500 text-[10px] px-0.5">✕</button>`;
                     container.appendChild(sepBox);
                 }
             });
@@ -810,10 +818,10 @@
             el.innerText = out || '(无表达)';
         }
 
-        function formatEmojiItem(item) {
+        function formatEmojiSingleItem(item) {
             let out = '';
-            const url = item.emojiUrl || item.rawText || '';
-            const code = item.emojiCode || (url.split('/').pop().split('?')[0]) || '';
+            const url = item.url || '';
+            const code = item.code || (url.split('/').pop().split('?')[0]) || '';
             const name = item.name || '表情';
 
             emojiTokens.forEach(tok => {
@@ -825,33 +833,51 @@
             return out;
         }
 
-        async function exportSelectedEmojisFormatted() {
-            const assets = await getAllAssets();
-            const emojiAssets = assets.filter(a => a.category === 'emojis' && selectedEmojiIds.has(a.id));
-            if (emojiAssets.length === 0) {
+        // Export TXT or DOCX for Current Emoji Pack
+        async function exportEmojiPack(formatType) {
+            if (!currentItem || !currentItem.emojiList) return;
+            const list = currentItem.emojiList.filter(em => selectedEmojiPackItems.has(em.id));
+            if (list.length === 0) {
                 showToast('ℹ️', '请先勾选需要导出的表情包！');
                 return;
             }
-            const lines = emojiAssets.map(item => formatEmojiItem(item));
-            const resultText = lines.join('\n');
-            navigator.clipboard.writeText(resultText);
-            showToast('📋', `已复制 ${emojiAssets.length} 个表情包（纯文本无硬编码预设）！`);
-        }
 
-        function toggleEmojiSelection(id) {
-            if (selectedEmojiIds.has(id)) selectedEmojiIds.delete(id);
-            else selectedEmojiIds.add(id);
-        }
+            const formattedLines = list.map(em => formatEmojiSingleItem(em));
+            const fullText = formattedLines.join('\n');
 
-        async function selectAllEmojis(select) {
-            const assets = await getAllAssets();
-            const emojiAssets = assets.filter(a => a.category === 'emojis');
-            if (select) {
-                emojiAssets.forEach(a => selectedEmojiIds.add(a.id));
-            } else {
-                selectedEmojiIds.clear();
+            if (formatType === 'txt') {
+                downloadText(fullText, `${currentItem.name}_表情包导出.txt`, 'text/plain');
+                showToast('📄', `已成功导出 ${list.length} 个表情为 TXT 文档！`);
+            } else if (formatType === 'docx') {
+                // Generate simple HTML-based docx compatible file
+                const docxContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>${currentItem.name}</title></head>
+                    <body>
+                        <h2>${currentItem.name} - 表情包列表</h2>
+                        <hr/>
+                        <pre style="font-family: monospace; font-size: 12px; line-height: 1.6;">${fullText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                    </body>
+                    </html>
+                `;
+                downloadText(docxContent, `${currentItem.name}_表情包导出.docx`, 'application/vnd.ms-word');
+                showToast('📘', `已成功导出 ${list.length} 个表情为 DOCX 文档！`);
             }
-            renderItems();
+        }
+
+        function togglePackEmojiSelection(emId) {
+            if (selectedEmojiPackItems.has(emId)) selectedEmojiPackItems.delete(emId);
+            else selectedEmojiPackItems.add(emId);
+        }
+
+        function selectAllPackEmojis(select) {
+            if (!currentItem || !currentItem.emojiList) return;
+            if (select) {
+                currentItem.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
+            } else {
+                selectedEmojiPackItems.clear();
+            }
+            renderEmojiPackGrid();
         }
 
         async function renderItems() {
@@ -859,38 +885,31 @@
             container.innerHTML = '';
 
             const builderPanel = document.getElementById('emojiExportBuilderPanel');
-            if (currentTab === 'emojis') {
-                builderPanel.classList.remove('hidden');
-            } else {
-                builderPanel.classList.add('hidden');
-            }
+            if (currentTab === 'emojis') { builderPanel.classList.remove('hidden'); }
+            else { builderPanel.classList.add('hidden'); }
 
-            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword)) || (a.emojiUrl && a.emojiUrl.toLowerCase().includes(keyword))));
+            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword))));
             document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
             if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-slate-400"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
 
             filtered.forEach(item => {
                 const card = document.createElement('div');
-                
+                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-amber-300 transition active:scale-[0.99]";
+                card.onclick = () => openDetailView(item);
+
                 if (currentTab === 'emojis') {
-                    const isChecked = selectedEmojiIds.has(item.id);
-                    card.className = "ui-card p-3 flex flex-col justify-between hover:border-amber-300 transition relative group";
-                    const imgUrl = item.emojiUrl || item.rawText || '';
+                    const count = item.emojiList ? item.emojiList.length : 0;
+                    const previewCover = item.emojiList && item.emojiList[0] ? item.emojiList[0].url : '';
                     card.innerHTML = `
-                        <div class="absolute top-2 left-2 z-10">
-                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleEmojiSelection('${item.id}')" class="w-4 h-4 text-amber-600 rounded border-slate-300 cursor-pointer">
-                        </div>
-                        <div class="h-32 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100 flex items-center justify-center p-1">
-                            <img src="${imgUrl}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/150x150/f1f5f9/94a3b8?text=图片失效'">
-                        </div>
                         <div>
-                            <h3 class="font-bold text-xs text-slate-800 text-center truncate px-1">${item.name}</h3>
-                            <p class="text-[10px] text-slate-400 font-mono text-center truncate pt-0.5">${item.emojiUrl || ''}</p>
+                            <div class="h-28 rounded-xl bg-amber-50 mb-2 border border-amber-100 flex items-center justify-center overflow-hidden p-1">
+                                ${previewCover ? `<img src="${previewCover}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/150x150/fef3c7/d97706?text=表情合集'">` : `<i data-lucide="smile" class="w-8 h-8 text-amber-500"></i>`}
+                            </div>
+                            <h3 class="font-bold text-sm text-slate-800 text-center truncate py-0.5">${item.name}</h3>
+                            <p class="text-[10px] text-amber-600 font-semibold text-center">包含 ${count} 个表情图片</p>
                         </div>
                     `;
                 } else {
-                    card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-purple-300 transition active:scale-[0.99]";
-                    card.onclick = () => openDetailView(item);
                     let coverHtml = '';
                     if (item.rawBuffer && item.fileType === 'png') {
                         const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
@@ -909,12 +928,49 @@
             currentItem = item; document.getElementById('pageTitle').innerText = item.name;
             document.getElementById('listView').classList.add('hidden'); document.getElementById('detailView').classList.remove('hidden'); document.getElementById('detailView').classList.add('flex');
             setupHeaderExportActions(item);
+
+            if (item.category === 'emojis') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('emoji-grid');
+                selectedEmojiPackItems.clear();
+                if (item.emojiList) item.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
+                renderEmojiPackGrid();
+                return;
+            }
+
             if (item.category === 'docs') { document.getElementById('secondaryPillsBar').classList.add('hidden'); switchDetailTab('doc-full'); document.getElementById('docFullContentText').innerText = item.rawText || '无内容'; return; }
+            
             document.getElementById('secondaryPillsBar').classList.remove('hidden');
             let pText = item.personality || extractPersonalityDeep(item.cardData || {});
             document.getElementById('overviewPersonalityText').innerText = pText;
             personalityCollapsed = true; document.getElementById('overviewPersonalityBody').classList.add('hidden'); document.getElementById('personalityChevron').classList.remove('rotate-180');
             renderGreetingsList(item); renderWorldbookEntries(); renderRegexEntries(); switchDetailTab('overview');
+        }
+
+        function renderEmojiPackGrid() {
+            const container = document.getElementById('emojiPackGridContainer');
+            if (!container || !currentItem || !currentItem.emojiList) return;
+            container.innerHTML = '';
+
+            currentItem.emojiList.forEach(em => {
+                const isChecked = selectedEmojiPackItems.has(em.id);
+                const itemCard = document.createElement('div');
+                itemCard.className = "ui-card p-2 flex flex-col justify-between hover:border-amber-300 transition relative group";
+                itemCard.innerHTML = `
+                    <div class="absolute top-1.5 left-1.5 z-10">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePackEmojiSelection('${em.id}')" class="w-3.5 h-3.5 text-amber-600 rounded border-slate-300 cursor-pointer">
+                    </div>
+                    <div class="h-24 rounded-lg overflow-hidden bg-slate-50 mb-1 border border-slate-100 flex items-center justify-center p-1">
+                        <img src="${em.url}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/100x100/f1f5f9/94a3b8?text=图片失效'">
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-[11px] text-slate-800 text-center truncate px-0.5">${em.name}</h4>
+                        <p class="text-[9px] text-slate-400 font-mono text-center truncate">${em.url}</p>
+                    </div>
+                `;
+                container.appendChild(itemCard);
+            });
+            lucide.createIcons();
         }
 
         function togglePersonalityCollapse() {
@@ -979,7 +1035,7 @@
         function switchDetailTab(subtab) {
             document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
             const activePill = document.getElementById(`detail-tab-${subtab}`); if (activePill) activePill.classList.add('active');
-            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full'].forEach(st => {
+            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full', 'emoji-grid'].forEach(st => {
                 const el = document.getElementById(`subview-${st}`);
                 if (st === subtab) el.classList.remove('hidden'); else el.classList.add('hidden');
             });
