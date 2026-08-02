@@ -311,12 +311,16 @@
                                 <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
                                 <span class="text-xs font-bold text-amber-900">自定义变量点选与排版导出器</span>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <button onclick="selectAllPackEmojis(true)" class="text-[11px] text-amber-700 font-medium hover:underline">全选</button>
                                 <span class="text-slate-300">|</span>
                                 <button onclick="selectAllPackEmojis(false)" class="text-[11px] text-amber-700 font-medium hover:underline">取消全选</button>
                                 
-                                <!-- Export Buttons for TXT & DOCX -->
+                                <!-- Export Buttons: Copy, TXT & DOCX -->
+                                <button onclick="exportEmojiPack('copy')" class="px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    <span>复制导出</span>
+                                </button>
                                 <button onclick="exportEmojiPack('txt')" class="px-2.5 py-1 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
                                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                                     <span>导出 TXT</span>
@@ -842,6 +846,7 @@
             return out;
         }
 
+        // Export Copy, TXT or DOCX for Current Emoji Pack
         async function exportEmojiPack(formatType) {
             if (!currentItem || !currentItem.emojiList) return;
             const list = currentItem.emojiList.filter(em => selectedEmojiPackItems.has(em.id));
@@ -853,7 +858,10 @@
             const formattedLines = list.map(em => formatEmojiSingleItem(em));
             const fullText = formattedLines.join('\n');
 
-            if (formatType === 'txt') {
+            if (formatType === 'copy') {
+                navigator.clipboard.writeText(fullText);
+                showToast('📋', `已快捷复制 ${list.length} 个表情格式文本至剪贴板！`);
+            } else if (formatType === 'txt') {
                 downloadText(fullText, `${currentItem.name}_表情包导出.txt`, 'text/plain');
                 showToast('📄', `已成功导出 ${list.length} 个表情为 TXT 文档！`);
             } else if (formatType === 'docx') {
