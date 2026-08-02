@@ -4,24 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>酒馆资产工坊 - TavernCardHub</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Mammoth.js for docx -->
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .ui-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-        .pill-tab { padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: #64748b; transition: all 0.2s; background: #ffffff; border: 1px solid #e2e8f0; }
-        .pill-tab.active { background: #7c3aed; color: #ffffff; border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
-        .wb-card-container { background: #ffffff; border: 1.5px solid #a855f7; border-radius: 1rem; padding: 0.875rem; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08); }
+        body { 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ui-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .pill-tab {
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .pill-tab.active {
+            background: #7c3aed;
+            color: #ffffff;
+            border-color: #7c3aed;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+        }
+        .wb-card-container {
+            background: #ffffff;
+            border: 1.5px solid #a855f7;
+            border-radius: 1rem;
+            padding: 0.875rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08);
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        #sidebarDrawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        #sidebarDrawer {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Toast Animation */
+        #toastContainer {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800">
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 transform translate-y-[-100%] opacity-0 pointer-events-none transition-all duration-300">
+        <div id="toastBox" class="bg-slate-900/90 text-white backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+            <span id="toastIcon">☁️</span>
+            <span id="toastMessage">消息提示</span>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
     <header class="h-14 px-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-20 shadow-xs">
         <div class="flex items-center space-x-3 min-w-0">
             <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95 shrink-0">
@@ -39,8 +91,10 @@
         </div>
     </header>
 
+    <!-- Drawer Overlay -->
     <div id="drawerOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 opacity-0 pointer-events-none transition-opacity duration-300"></div>
 
+    <!-- Sliding Sidebar Drawer -->
     <aside id="sidebarDrawer" class="fixed top-0 left-0 bottom-0 w-80 bg-white border-r border-slate-200 z-40 p-4 flex flex-col justify-between -translate-x-full shadow-2xl overflow-y-auto custom-scrollbar">
         <div class="space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 px-2">
@@ -58,6 +112,7 @@
                 </button>
             </div>
 
+            <!-- Asset Category Buttons -->
             <div class="space-y-1">
                 <div class="text-[11px] font-semibold text-slate-400 px-3 py-1 uppercase tracking-wider">资产分类</div>
                 
@@ -102,6 +157,7 @@
                 </button>
             </div>
 
+            <!-- Cloud Sync Collapsible Section -->
             <div class="bg-purple-50/80 border border-purple-100 rounded-2xl p-3 space-y-2">
                 <div class="flex items-center justify-between">
                     <button onclick="toggleCloudConfigCollapse()" class="text-xs font-bold text-purple-700 flex items-center gap-1.5">
@@ -118,8 +174,8 @@
                         <input type="text" id="cfgSupabaseUrl" placeholder="https://your-project.supabase.co" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Anon Key</label>
-                        <input type="password" id="cfgSupabaseKey" placeholder="eyJhbGciOi..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
+                        <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Key (Publishable / Anon)</label>
+                        <input type="password" id="cfgSupabaseKey" placeholder="sb_publishable_... 或 eyJhbGci..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
                     </div>
                     <div class="flex items-center justify-between gap-1.5 pt-1">
                         <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-700 transition flex-1">保存云端配置</button>
@@ -137,7 +193,7 @@
                         <ol class="list-decimal list-inside space-y-1 text-[10px] text-slate-500">
                             <li>登录 <a href="https://supabase.com" target="_blank" class="text-purple-600 underline">supabase.com</a> 创建免费项目。</li>
                             <li>进入 <span class="font-bold text-slate-700">SQL Editor</span> 运行复制的一键建表 SQL。</li>
-                            <li>复制设置里的 <span class="font-bold text-slate-700">URL</span> 与 <span class="font-bold text-slate-700">Anon Key</span> 填入上方保存即可。</li>
+                            <li>复制设置里的 <span class="font-bold text-slate-700">URL</span> 与 <span class="font-bold text-slate-700">Publishable Key</span> 填入上方保存即可。</li>
                         </ol>
                     </div>
                 </div>
@@ -268,6 +324,19 @@
         let supabaseClient = null;
         let cloudConfigCollapsed = true;
 
+        // Toast Toast System
+        function showToast(icon, message, duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            document.getElementById('toastIcon').innerText = icon;
+            document.getElementById('toastMessage').innerText = message;
+            
+            container.classList.remove('translate-y-[-100%]', 'opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                container.classList.add('translate-y-[-100%]', 'opacity-0', 'pointer-events-none');
+            }, duration);
+        }
+
         function initSupabaseClient() {
             const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || '';
             const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || '';
@@ -294,11 +363,11 @@
         function saveCustomCloudConfig() {
             const url = document.getElementById('cfgSupabaseUrl').value.trim();
             const key = document.getElementById('cfgSupabaseKey').value.trim();
-            if (!url || !key) { alert('请填写完整的 Supabase URL 与 Anon Key！'); return; }
+            if (!url || !key) { alert('请填写完整的 Supabase URL 与 Key！'); return; }
             localStorage.setItem('TAVERN_SUPABASE_URL', url);
             localStorage.setItem('TAVERN_SUPABASE_KEY', key);
             initSupabaseClient();
-            alert('Supabase 云端配置已保存！');
+            showToast('✅', 'Supabase 云端凭证已保存并连接！');
         }
 
         function toggleCloudConfigCollapse() {
@@ -311,7 +380,7 @@
 
         const SQL_CODE = `CREATE TABLE IF NOT EXISTS tavern_assets (id TEXT PRIMARY KEY, category TEXT, name TEXT, file_type TEXT, card_data JSONB, raw_text TEXT, raw_buffer_base64 TEXT, created_at BIGINT); ALTER TABLE tavern_assets ENABLE ROW LEVEL SECURITY; CREATE POLICY "Public Access" ON tavern_assets FOR ALL USING (true) WITH CHECK (true);`;
 
-        function copySqlCode() { navigator.clipboard.writeText(SQL_CODE); alert('建表 SQL 已经复制！'); }
+        function copySqlCode() { navigator.clipboard.writeText(SQL_CODE); showToast('📋', '建表 SQL 已复制到剪贴板！'); }
 
         let db, currentTab = 'cards', currentItem = null, personalityCollapsed = true;
 
@@ -421,22 +490,36 @@
                     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
                     base64Buf = btoa(binary);
                 }
-                await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
+                const { error } = await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
+                if (!error) {
+                    showToast('☁️', `“${asset.name}”已实时同步备份至云端`);
+                } else {
+                    showToast('⚠', `云端同步失败: ${error.message}`);
+                }
             } catch(e){}
         }
 
         async function manualCloudSync() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法同步。请在侧边栏填入 URL 与 Key！'); return; }
             const assets = await getAllAssets(); document.getElementById('cloudStatusBadge').innerText = '同步中...';
-            for (let a of assets) await syncAssetToCloudSilent(a);
-            document.getElementById('cloudStatusBadge').innerText = '同步完成'; setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
+            showToast('☁️', '开始手动全量同步至 Supabase...');
+            let count = 0;
+            for (let a of assets) {
+                await syncAssetToCloudSilent(a);
+                count++;
+            }
+            document.getElementById('cloudStatusBadge').innerText = '同步完成';
+            showToast('✅', `成功手动备份了 ${count} 个资产到云端！`);
+            setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
         }
 
         async function restoreFromCloud() {
             if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复。请在侧边栏填入 URL 与 Key！'); return; }
             document.getElementById('cloudStatusBadge').innerText = '恢复中...';
+            showToast('🔄', '正在从 Supabase 云端恢复数据...');
             try {
-                const { data } = await supabaseClient.from('tavern_assets').select('*');
+                const { data, error } = await supabaseClient.from('tavern_assets').select('*');
+                if (error) { showToast('❌', `拉取失败: ${error.message}`); return; }
                 if (data && data.length > 0) {
                     for (let row of data) {
                         let buffer = null;
@@ -449,9 +532,12 @@
                         const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
                         const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
                     }
-                    updateBadges(); renderItems(); alert(`恢复了 ${data.length} 项记录！`);
+                    updateBadges(); renderItems();
+                    showToast('🎉', `拉取完毕！已从云端完整恢复 ${data.length} 项资产！`);
+                } else {
+                    showToast('ℹ️', '云端数据库目前为空，无备份数据');
                 }
-            } catch(e){ alert('恢复失败，请检查 Supabase 配置'); }
+            } catch(e){ showToast('❌', '恢复失败，请检查 Supabase 配置与表结构'); }
             document.getElementById('cloudStatusBadge').innerText = '已连接';
         }
 
@@ -554,7 +640,7 @@
 
         function copyGreetingText(index) {
             const el = document.getElementById(`greeting-text-${index}`);
-            if (el) { navigator.clipboard.writeText(el.innerText); alert('开场白已复制！'); }
+            if (el) { navigator.clipboard.writeText(el.innerText); showToast('📋', '开场白已复制！'); }
         }
 
         function closeDetailView() {
@@ -610,18 +696,18 @@
 
         function copyEntryContent(index) {
             const wb = currentItem.worldbook || currentItem.cardData, entries = wb?.entries || (Array.isArray(wb) ? wb : []);
-            if (entries[index]) { navigator.clipboard.writeText(entries[index].content || ''); alert('词条内容已复制！'); }
+            if (entries[index]) { navigator.clipboard.writeText(entries[index].content || ''); showToast('📋', '词条内容已复制！'); }
         }
 
         async function deleteCurrentItem() {
             if (!currentItem) return;
             if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
                 const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').delete(currentItem.id);
-                tx.oncomplete = async () => { if (supabaseClient) { try { await supabaseClient.from('tavern_assets').delete().eq('id', currentItem.id); } catch(e){} } closeDetailView(); updateBadges(); renderItems(); };
+                tx.oncomplete = async () => { if (supabaseClient) { try { await supabaseClient.from('tavern_assets').delete().eq('id', currentItem.id); } catch(e){} } closeDetailView(); updateBadges(); renderItems(); showToast('🗑️', '已删除改项资产'); };
             }
         }
 
-        function copyText(id) { const text = document.getElementById(id)?.innerText; if (text) { navigator.clipboard.writeText(text); alert('已复制到剪贴板！'); } }
+        function copyText(id) { const text = document.getElementById(id)?.innerText; if (text) { navigator.clipboard.writeText(text); showToast('📋', '文本已复制！'); } }
     </script>
 </body>
 </html>
