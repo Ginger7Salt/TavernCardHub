@@ -109,17 +109,17 @@
                         <span>☁️ Supabase 云端备份设置</span>
                         <i data-lucide="chevron-down" id="cloudConfigChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
                     </button>
-                    <span id="cloudStatusBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">已连接</span>
+                    <span id="cloudStatusBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">未配置</span>
                 </div>
 
                 <div id="cloudConfigBody" class="space-y-2.5 pt-1 hidden">
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Project URL</label>
-                        <input type="text" id="cfgSupabaseUrl" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
+                        <input type="text" id="cfgSupabaseUrl" placeholder="https://your-project.supabase.co" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
                     </div>
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">Supabase Anon Key</label>
-                        <input type="password" id="cfgSupabaseKey" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
+                        <input type="password" id="cfgSupabaseKey" placeholder="eyJhbGciOi..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-700 focus:outline-none focus:border-purple-500">
                     </div>
                     <div class="flex items-center justify-between gap-1.5 pt-1">
                         <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-700 transition flex-1">保存云端配置</button>
@@ -145,7 +145,7 @@
         </div>
 
         <div class="pt-3 border-t border-slate-100 text-center">
-            <p class="text-[10px] text-slate-400">IndexedDB + Supabase 云端多用户独立备份</p>
+            <p class="text-[10px] text-slate-400">IndexedDB 本地优先 + 可选 Supabase 独立私有云备份</p>
         </div>
     </aside>
 
@@ -264,15 +264,13 @@
 
     <script>
         lucide.createIcons();
-        const DEFAULT_SUPABASE_URL = "https://hvvihepqthfxpoglryqh.supabase.co";
-        const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dmloZXBxdGhmeXBvZ2xyeXFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2MjIxNTgsImV4cCI6MjA2ODE5ODE1OH0.3K8y4XQ33WJpD84dYfOaM5X8S7R23YQ017382211993";
 
         let supabaseClient = null;
         let cloudConfigCollapsed = true;
 
         function initSupabaseClient() {
-            const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || DEFAULT_SUPABASE_URL;
-            const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || DEFAULT_SUPABASE_KEY;
+            const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || '';
+            const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || '';
             document.getElementById('cfgSupabaseUrl').value = customUrl;
             document.getElementById('cfgSupabaseKey').value = customKey;
 
@@ -282,9 +280,14 @@
                     document.getElementById('cloudStatusBadge').innerText = '已连接';
                     document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold';
                 } catch(e) {
-                    document.getElementById('cloudStatusBadge').innerText = '未连接';
-                    document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold';
+                    supabaseClient = null;
+                    document.getElementById('cloudStatusBadge').innerText = '连接失败';
+                    document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold';
                 }
+            } else {
+                supabaseClient = null;
+                document.getElementById('cloudStatusBadge').innerText = '未配置';
+                document.getElementById('cloudStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold';
             }
         }
 
@@ -423,13 +426,14 @@
         }
 
         async function manualCloudSync() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法同步。请在侧边栏填入 URL 与 Key！'); return; }
             const assets = await getAllAssets(); document.getElementById('cloudStatusBadge').innerText = '同步中...';
             for (let a of assets) await syncAssetToCloudSilent(a);
             document.getElementById('cloudStatusBadge').innerText = '同步完成'; setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
         }
 
         async function restoreFromCloud() {
-            if (!supabaseClient) return;
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复。请在侧边栏填入 URL 与 Key！'); return; }
             document.getElementById('cloudStatusBadge').innerText = '恢复中...';
             try {
                 const { data } = await supabaseClient.from('tavern_assets').select('*');
@@ -447,7 +451,7 @@
                     }
                     updateBadges(); renderItems(); alert(`恢复了 ${data.length} 项记录！`);
                 }
-            } catch(e){ alert('恢复失败，请检查配置'); }
+            } catch(e){ alert('恢复失败，请检查 Supabase 配置'); }
             document.getElementById('cloudStatusBadge').innerText = '已连接';
         }
 
