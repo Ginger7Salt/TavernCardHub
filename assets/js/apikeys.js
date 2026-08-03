@@ -376,10 +376,10 @@ async function fetchApiKeyBalance(id) {
 
     showToast('⏳', '正在查询余额...');
 
-    // 候选路径列表
+    // 优先尝试 New-API / One-API 专属配额路由，最后尝试 subscription 路由
     const candidatePaths = [
-        '/v1/dashboard/billing/subscription',
         '/api/user/self',
+        '/v1/dashboard/billing/subscription',
         '/v1/dashboard/billing/credit_grants',
         '/user/balance'
     ];
@@ -397,35 +397,55 @@ async function fetchApiKeyBalance(id) {
             if (!res.ok) continue;
             const data = await res.json();
 
-            // 1. New-API / One-API: { success: true, data: { quota: 5000000, used_quota: 50000 } }
+            // 1. New-API / One-API 用户配额: { success: true, data: { quota: 5000000, used_quota: 50000 } }
             if (data && data.data && typeof data.data.quota !== 'undefined') {
                 const remainQuota = (data.data.quota / 500000).toFixed(2);
-                showToast('💰', `充值余额: $${remainQuota}`);
+                showToast('💰', `账户余额: $${remainQuota}`);
                 return;
             }
 
-            // 2. OpenAI / New-API 节点 Subscription
+            // 2. OpenAI / New-API 节点 Subscription: { hard_limit_usd: ... }
             if (data && typeof data.hard_limit_usd !== 'undefined') {
-                // 如果是具体充值额度（小于 1000000 美分，即 < $10000），计算差额
-                if (data.hard_limit_usd < 1000000) {
-                    showToast('💰', `充值余额: $${data.hard_limit_usd.toFixed(2)}`);
+                let hardLimitUSD = data.hard_limit_usd / 100; // 美分转美元
+                let usedUSD = 0;
+                
+                // 拉取配套的已用金额 usage
+                try {
+                    const now = new Date();
+                    const startDate = `${now.getFullYear()}-01-01`;
+                    const endDate = `${now.getFullYear()}-12-31`;
+                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${startDate}&end_date=${endDate}`;
+                    const usageRes = await fetch(usageUrl, { headers: { 'Authorization': 'Bearer ' + item.apiKey } });
+                    if (usageRes.ok) {
+                        const usageData = await usageRes.json();
+                        if (usageData && typeof usageData.total_usage !== 'undefined') {
+                            usedUSD = usageData.total_usage / 100;
+                        }
+                    }
+                } catch(e) {}
+
+                // 计算真正剩余金额
+                let remainUSD = Math.max(0, hardLimitUSD - usedUSD);
+                
+                // 如果硬上限为 100 万美元这类的虚拟默认值，直接把已算出的消费与基础额度以具体美金数字弹出！
+                if (hardLimitUSD >= 1000000) {
+                    showToast('💰', `可用额度: $${remainUSD.toFixed(2)} (已用 $${usedUSD.toFixed(2)})`);
                 } else {
-                    // 如果是系统默认的 1 亿上限，尝试拉取已用金额并给出明确提醒
-                    showToast('💰', `充值余额: 额度充足`);
+                    showToast('💰', `账户余额: $${remainUSD.toFixed(2)}`);
                 }
                 return;
             }
 
-            // 3. 直接返回 total_available
+            // 3. 直接返回 total_available: { total_available: 10.00 }
             if (data && typeof data.total_available !== 'undefined') {
-                showToast('💰', `充值余额: $${Number(data.total_available).toFixed(2)}`);
+                showToast('💰', `账户余额: $${Number(data.total_available).toFixed(2)}`);
                 return;
             }
 
-            // 4. 直接返回 balance
+            // 4. 直接返回 balance: { balance: 10.5 }
             if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
                 const b = data.balance !== undefined ? data.balance : data.data.balance;
-                showToast('💰', `充值余额: $${b}`);
+                showToast('💰', `账户余额: $${b}`);
                 return;
             }
         } catch(e) {
@@ -433,6 +453,6 @@ async function fetchApiKeyBalance(id) {
         }
     }
 
-    showToast('⚠️', '未能识别充值余额（请确认 Key 权限或接口格式）');
+    showToast('⚠️', '未能识别账户余额（请确认 Key 权限或接口格式）');
 }
 window.fetchApiKeyBalance = fetchApiKeyBalance;
