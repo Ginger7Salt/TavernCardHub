@@ -751,7 +751,7 @@
                                 <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
                                 <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-semibold transition shrink-0">
                                     选择本地图片
-                                    <input type="file" id="galleryFileInput" accept="image/*" class="hidden" onchange="handleGalleryFileUpload(event)">
+                                    <input type="file" id="galleryFileInput" accept="image/*" multiple class="hidden" onchange="handleGalleryFileUpload(event)">
                                 </label>
                             </div>
                         </div>
@@ -2081,6 +2081,20 @@
             lucide.createIcons();
         }
 
+        
+        async function renameCurrentItem() {
+            if (!currentItem) return;
+            const newName = prompt('请输入新名称：', currentItem.name);
+            if (newName && newName.trim() && newName.trim() !== currentItem.name) {
+                currentItem.name = newName.trim();
+                await saveAsset(currentItem);
+                document.getElementById('pageTitle').innerText = currentItem.name;
+                updateBadges();
+                renderItems();
+                showToast('✏️', `已重命名为 “${currentItem.name}”`);
+            }
+        }
+
         function openDetailView(item) {
             currentItem = item; document.getElementById('pageTitle').innerText = item.name;
             document.getElementById('listView').classList.add('hidden'); document.getElementById('detailView').classList.remove('hidden'); document.getElementById('detailView').classList.add('flex');
@@ -2174,7 +2188,7 @@
 
         function setupHeaderExportActions(item) {
             const container = document.getElementById('headerExportActions');
-            container.innerHTML = `<button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            container.innerHTML = `<button onclick="renameCurrentItem()" class="p-1.5 rounded-lg text-[#b86b7a] hover:bg-[#f5e1e3] transition ml-1" title="重命名"><i data-lucide="edit-3" class="w-4 h-4"></i></button><button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
             
             if (item.category === 'docs') {
                 const btnCopy = document.createElement('button'); btnCopy.onclick = () => { navigator.clipboard.writeText(item.rawText || ''); showToast('📋', '文档内容已复制！'); };
