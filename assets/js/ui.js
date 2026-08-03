@@ -1,5 +1,6 @@
 function switchTab(tab) {
     currentTab = tab;
+    if (typeof currentFolderOpened !== 'undefined') currentFolderOpened = null;
     closeDetailView();
     toggleSidebar();
 
@@ -1378,3 +1379,12 @@ function switchTab(tab) {
     
 
     const DB_NAME = '
+
+function openFolder(fName) {
+    currentFolderOpened = fName;
+    renderItems();
+}
+function closeFolder() {
+    currentFolderOpened = null;
+    renderItems();
+}
