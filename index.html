@@ -153,8 +153,8 @@
 
                 <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
-                        <i data-lucide="code" class="w-4 h-4 text-[#82a39b]"></i>
-                        <span>酒馆正则 (Regex)</span>
+                        <i data-lucide="sparkles" class="w-4 h-4 text-[#82a39b]"></i>
+                        <span>番外与小剧场 (Extras)</span>
                     </div>
                     <span id="badge-regex" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
@@ -231,6 +231,36 @@
 
         <!-- Section 1: Item Grid/List View -->
         <div id="listView" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            
+            <!-- Custom Panel for Extras & Side Stories -->
+            <div id="extrasBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#e8f0f8] bg-[#f4f8fb]">
+                <div class="flex items-center justify-between border-b border-[#d8e4f2] pb-2 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-[#688ca6]"></i>
+                        <span class="text-xs font-bold text-[#4e6b82]">新建 / 复制粘贴收纳番外与小剧场</span>
+                    </div>
+                    <div class="text-[11px] text-[#688ca6] font-medium">支持粘贴保存、取名、随时查看复制与导出</div>
+                </div>
+
+                <div class="bg-white border border-[#d8e4f2] rounded-xl p-3 space-y-2.5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="md:col-span-1">
+                            <label class="block text-[11px] font-bold text-[#4e6b82] mb-1">番外/小剧场 名字:</label>
+                            <input type="text" id="extrasTitleInput" placeholder="例如：夏日海滩番外篇、小剧场#1..." class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#7a9bb8] font-medium">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-bold text-[#4e6b82] mb-1">粘贴番外/小剧场 内容:</label>
+                            <textarea id="extrasContentInput" placeholder="直接粘贴番外小说、小剧场台词或 Prompt 内容..." class="w-full h-20 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg p-2 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#7a9bb8] custom-scrollbar"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-0.5">
+                        <button onclick="savePastedExtrasAsset()" class="px-4 py-1.5 rounded-full bg-[#7a9bb8] hover:bg-[#688ca6] text-white text-xs font-bold shadow-sm shadow-[#7a9bb8]/30 transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>保存番外/小剧场</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Custom Export Format Builder for Emojis Area -->
             <div id="emojiExportBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
@@ -979,13 +1009,40 @@
             }
         }
 
+        async function savePastedExtrasAsset() {
+            const titleInput = document.getElementById('extrasTitleInput');
+            const contentInput = document.getElementById('extrasContentInput');
+            const title = titleInput ? titleInput.value.trim() : '';
+            const content = contentInput ? contentInput.value.trim() : '';
+
+            if (!title) { showToast('⚠️', '请先输入番外/小剧场名字！'); return; }
+            if (!content) { showToast('⚠️', '请先输入番外/小剧场内容！'); return; }
+
+            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await saveAsset({ id, category: 'regex', name: title, fileType: 'txt', rawText: content, createdAt: Date.now() });
+
+            titleInput.value = ''; contentInput.value = '';
+            updateBadges(); renderItems();
+            showToast('🎉', `已成功保存番外/小剧场 “${title}”！`);
+        }
+
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
             const builderPanel = document.getElementById('emojiExportBuilderPanel');
-            if (currentTab === 'emojis') { builderPanel.classList.remove('hidden'); }
-            else { builderPanel.classList.add('hidden'); }
+            const extrasPanel = document.getElementById('extrasBuilderPanel');
+            
+            if (currentTab === 'emojis') { 
+                builderPanel.classList.remove('hidden'); 
+                extrasPanel.classList.add('hidden');
+            } else if (currentTab === 'regex') {
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.remove('hidden');
+            } else { 
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.add('hidden');
+            }
 
             const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword))));
             document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
@@ -1039,6 +1096,16 @@
                 switchDetailTab('worldbook');
                 selectedWbEntryIndexes.clear();
                 renderWorldbookEntries();
+                return;
+            }
+
+            // Standalone Extras / Side Stories Category Handling
+            if (item.category === 'regex') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#7a9bb8]"></i><span>番外/小剧场 内容</span>`;
+                document.getElementById('docFullContentText').innerText = item.rawText || '无内容';
+                lucide.createIcons();
                 return;
             }
 
@@ -1097,6 +1164,36 @@
             const container = document.getElementById('headerExportActions');
             container.innerHTML = `<button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
             
+            if (item.category === 'regex') {
+                const btnCopy = document.createElement('button'); btnCopy.onclick = () => { navigator.clipboard.writeText(item.rawText || ''); showToast('📋', '番外/小剧场 内容已复制！'); };
+                btnCopy.className = "px-2.5 py-1 rounded-full bg-[#e098a5] text-white hover:bg-[#d88c9a] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnCopy.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> 复制内容`;
+                container.insertBefore(btnCopy, container.firstChild);
+
+                const btnTxt = document.createElement('button'); btnTxt.onclick = () => downloadText(item.rawText || '', `${item.name}.txt`, 'text/plain');
+                btnTxt.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnTxt.innerHTML = `<i data-lucide="file-text" class="w-3 h-3"></i> 导出 TXT`;
+                container.insertBefore(btnTxt, container.firstChild);
+
+                const btnDocx = document.createElement('button'); btnDocx.onclick = () => {
+                    const docxContent = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><title>${item.name}</title></head>
+                        <body>
+                            <h2>${item.name}</h2>
+                            <hr/>
+                            <pre style="font-family: sans-serif; font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${(item.rawText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        </body>
+                        </html>
+                    `;
+                    downloadText(docxContent, `${item.name}.docx`, 'application/vnd.ms-word');
+                    showToast('📘', '已成功导出为 DOCX 文档！');
+                };
+                btnDocx.className = "px-2.5 py-1 rounded-full bg-[#7a9bb8] text-white hover:bg-[#688ca6] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnDocx.innerHTML = `<i data-lucide="file" class="w-3 h-3"></i> 导出 DOCX`;
+                container.insertBefore(btnDocx, container.firstChild);
+            }
+
             if (item.category === 'worldbooks') {
                 const btnWbAll = document.createElement('button'); btnWbAll.onclick = () => exportCardWorldbookFull(item);
                 btnWbAll.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm"; 
