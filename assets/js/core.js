@@ -33,8 +33,8 @@ lucide.createIcons();
         }
 
         function initGithubClient() {
-            const u = localStorage.getItem('TAVERN_GITHUB_USER') || '';
-            const r = localStorage.getItem('TAVERN_GITHUB_REPO') || '';
+            const u = localStorage.getItem('TAVERN_GITHUB_USER') || 'idikale163-source';
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO') || 'resource-hub-backup';
             const t = localStorage.getItem('TAVERN_GITHUB_TOKEN') || '';
             document.getElementById('cfgGithubUser').value = u;
             document.getElementById('cfgGithubRepo').value = r;
@@ -49,24 +49,47 @@ lucide.createIcons();
             }
         }
 
-        function saveCustomGithubConfig() {
-            const u = document.getElementById('cfgGithubUser').value.trim();
-            const r = document.getElementById('cfgGithubRepo').value.trim();
+                async function saveCustomGithubConfig() {
             const t = document.getElementById('cfgGithubToken').value.trim();
-            if (!u || !r || !t) { alert('请填写完整的 GitHub 用户名、仓库名与 Token！'); return; }
+            if (!t) { alert('请填写 Personal Access Token (ghp_...)！'); return; }
+            
+            let u = document.getElementById('cfgGithubUser').value.trim();
+            let r = document.getElementById('cfgGithubRepo').value.trim() || 'resource-hub-backup';
+            
+            document.getElementById('githubStatusBadge').innerText = '验证中...';
+            
+            // 如果用户没填用户名，通过 Token 自动请求 GitHub API 提取用户名
+            if (!u) {
+                try {
+                    const res = await fetch('https://api.github.com/user', {
+                        headers: { 'Authorization': `token ${t}`, 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (res.ok) {
+                        const userData = await res.json();
+                        if (userData && userData.login) {
+                            u = userData.login;
+                            document.getElementById('cfgGithubUser').value = u;
+                        }
+                    }
+                } catch(e) { console.error('Auto fetch username failed', e); }
+            }
+
+            if (!u) u = 'idikale163-source'; // 兜底备用
+
             localStorage.setItem('TAVERN_GITHUB_USER', u);
             localStorage.setItem('TAVERN_GITHUB_REPO', r);
             localStorage.setItem('TAVERN_GITHUB_TOKEN', t);
+            document.getElementById('cfgGithubRepo').value = r;
             initGithubClient();
-            showToast('✅', 'GitHub 私有仓库凭证已保存！');
+            showToast('✅', `已自动识别用户 [${u}] 并保存凭证！`);
         }
 
         // BACKUP FULL ASSETS TO GITHUB PRIVATE REPO
         async function backupToGithubRepo() {
-            const u = localStorage.getItem('TAVERN_GITHUB_USER');
-            const r = localStorage.getItem('TAVERN_GITHUB_REPO');
+            const u = localStorage.getItem('TAVERN_GITHUB_USER') || 'idikale163-source';
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO') || 'resource-hub-backup';
             const t = localStorage.getItem('TAVERN_GITHUB_TOKEN');
-            if (!u || !r || !t) { alert('未配置 GitHub 凭证，请先在侧边栏填写保存！'); return; }
+            if (!t) { alert('未配置 Personal Access Token，请先在侧边栏填写 Token 并保存！'); return; }
 
             document.getElementById('githubStatusBadge').innerText = '备份中...';
             showToast('📤', '正在打包本地全量资产推送到 GitHub...');
@@ -118,10 +141,10 @@ lucide.createIcons();
 
         // RESTORE FROM GITHUB PRIVATE REPO
         async function restoreFromGithubRepo() {
-            const u = localStorage.getItem('TAVERN_GITHUB_USER');
-            const r = localStorage.getItem('TAVERN_GITHUB_REPO');
+            const u = localStorage.getItem('TAVERN_GITHUB_USER') || 'idikale163-source';
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO') || 'resource-hub-backup';
             const t = localStorage.getItem('TAVERN_GITHUB_TOKEN');
-            if (!u || !r || !t) { alert('未配置 GitHub 凭证，请先在侧边栏填写保存！'); return; }
+            if (!t) { alert('未配置 Personal Access Token，请先在侧边栏填写 Token 并保存！'); return; }
 
             if (!confirm('⚠️ 确定要从 GitHub 私有仓库拉取备份覆盖/合并当前本地资产吗？')) return;
 
