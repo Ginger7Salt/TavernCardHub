@@ -451,11 +451,27 @@ async function openApiKeyDetailModal(id) {
                 <button onclick="closeApiKeyDetailModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold ml-1">&times;</button>
             </div>
 
-            <div class="space-y-3 text-xs text-[#5c494a] py-1">
+            <div class="space-y-2.5 text-xs text-[#5c494a] py-1">
                 <div class="flex items-center justify-between">
                     <span class="text-[#8c7476] font-medium">令牌名称 <span class="text-[#d88c9a]">🍥</span></span>
-                    <span class="font-bold font-mono text-[#d88c9a]">${info.name}</span>
+                    <span class="font-bold font-mono text-[#d88c9a] truncate max-w-[180px]">${info.name}</span>
                 </div>
+
+                <div class="space-y-1 bg-[#faf6f0] p-2 rounded-xl border border-[#f2e3e3]">
+                    <div class="flex items-center justify-between gap-1 text-[11px]">
+                        <span class="text-[#8c7476] font-medium shrink-0">Base URL:</span>
+                        <button onclick="copyApiKeyText('${item.baseUrl}', 'URL', event)" class="font-mono text-[#4a3e3d] truncate hover:text-[#d88c9a] text-[10px] text-right" title="点击复制完整 URL">
+                            ${item.baseUrl || '（默认官方）'} 📋
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between gap-1 text-[11px] border-t border-[#f2e3e3] pt-1">
+                        <span class="text-[#8c7476] font-medium shrink-0">API Key:</span>
+                        <button onclick="copyApiKeyText('${item.apiKey}', 'Key', event)" class="font-mono text-[#d88c9a] break-all text-[10px] text-right font-bold hover:underline" title="点击复制完整 Key">
+                            ${item.apiKey} 📋
+                        </button>
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-between">
                     <span class="text-[#8c7476] font-medium">令牌总额 <span class="text-[#d88c9a]">🍥</span></span>
                     <span class="font-bold text-[#4a3e3d]">${info.total}</span>
