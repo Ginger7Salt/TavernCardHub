@@ -1970,6 +1970,7 @@
                     name: title, 
                     fileType: file.type || 'image/png', 
                     cover: base64Data, 
+                    subCategory: currentFolderOpened || '',
                     createdAt: Date.now() + i 
                 });
                 count++;
@@ -1997,7 +1998,7 @@
             if (!imgUrl) { showToast('⚠️', '请粘贴图片URL或选择本地图片！'); return; }
 
             const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            await saveAsset({ id, category: 'gallery', name: title, fileType: 'img', rawText: imgUrl, createdAt: Date.now() });
+            await saveAsset({ id, category: 'gallery', name: title, fileType: 'img', rawText: imgUrl, subCategory: currentFolderOpened || '', createdAt: Date.now() });
 
             titleInput.value = ''; urlInput.value = '';
             document.getElementById('galleryFileInput').value = '';
