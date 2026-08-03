@@ -757,9 +757,9 @@
                         </div>
                     </div>
                     <div class="flex justify-end pt-0.5">
-                        <button onclick="saveGalleryPictureAsset()" class="px-4 py-1.5 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-bold transition flex items-center gap-1.5">
-                            <i data-lucide="link" class="w-4 h-4"></i>
-                            <span>仅保存网络链接</span>
+                        <button id="gallerySaveBtn" type="button" class="px-4 py-1.5 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-bold transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>添加到买图库</span>
                         </button>
                     </div>
                 </div>
@@ -1470,13 +1470,17 @@
                         resolve(); 
                         syncAssetToCloudSilent(asset); 
                     };
-                    tx.onerror = (err) => {
+                    req.onerror = (err) => {
                         console.error('IndexedDB Put Error:', err);
-                        resolve(); // Resolve to not block UI
+                        reject(req.error || new Error('IndexedDB 写入失败'));
+                    };
+                    tx.onerror = () => {
+                        console.error('IndexedDB transaction error:', tx.error);
+                        reject(tx.error || new Error('IndexedDB 事务失败'));
                     };
                 } catch(err) {
                     console.error('saveAsset exception:', err);
-                    resolve();
+                    reject(err);
                 }
             });
         }
@@ -1959,84 +1963,87 @@
             renderTagFilterBar();
             renderItems();
         }
+        let pendingGalleryFiles = [];
 
-        
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            const galleryInput = document.getElementById('galleryFileInput');
-            const galleryUploadBtn = document.getElementById('galleryUploadBtn');
-            if (galleryInput) {
-                galleryInput.addEventListener('change', handleGalleryFileUpload);
-            }
-            if (galleryUploadBtn && galleryInput) {
-                galleryUploadBtn.addEventListener('click', () => galleryInput.click());
-            }
-        });
-
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            const galleryInput = document.getElementById('galleryFileInput');
-            const galleryUploadBtn = document.getElementById('galleryUploadBtn');
-            if (galleryInput) {
-                galleryInput.addEventListener('change', handleGalleryFileUpload);
-            }
-            if (galleryUploadBtn && galleryInput) {
-                galleryUploadBtn.addEventListener('click', () => galleryInput.click());
-            }
-        });
-
-        async function handleGalleryFileUpload(e) {
-            showToast('⌛', '已拦截到图片选择，正在处理...');
-            const files = Array.from(e.target.files || []);
-            if (!files || files.length === 0) return;
-
-            showToast('⌛', `正在批量存入 ${files.length} 张图片...`);
-            let count = 0;
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const title = file.name.replace(/\.[^/.]+$/, '');
-                const id = 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).substr(2, 9);
-                await saveAsset({ 
-                    id, 
-                    category: 'gallery', 
-                    name: title, 
-                    fileType: file.type || 'image/png', 
-                    cover: file, 
-                    subCategory: currentFolderOpened || '',
-                    createdAt: Date.now() + i 
-                });
-                count++;
-            }
-            e.target.value = '';
-            const titleInput = document.getElementById('galleryTitleInput');
-            const urlInput = document.getElementById('galleryUrlInput');
-            if (titleInput) titleInput.value = '';
-            if (urlInput) urlInput.value = '';
-
-            allAssetsCache = null;
-            updateBadges(); 
-            renderItems();
-            showToast('🎉', `已成功存入 ${count} 张图片！`);
+        function bindGalleryUploadControls() {
+            const input = document.getElementById('galleryFileInput');
+            const chooseBtn = document.getElementById('galleryUploadBtn');
+            const saveBtn = document.getElementById('gallerySaveBtn');
+            if (!input || input.dataset.bound === '1') return;
+            input.dataset.bound = '1';
+            chooseBtn?.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                input.click();
+            });
+            input.addEventListener('change', (ev) => {
+                pendingGalleryFiles = Array.from(ev.target.files || []);
+                if (pendingGalleryFiles.length) {
+                    showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请点击“添加到买图库”`);
+                }
+            });
+            saveBtn?.addEventListener('click', saveGalleryPictureAsset);
         }
 
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, { once: true });
+        } else {
+            bindGalleryUploadControls();
+        }
 
         async function saveGalleryPictureAsset() {
             const titleInput = document.getElementById('galleryTitleInput');
             const urlInput = document.getElementById('galleryUrlInput');
             const title = titleInput ? titleInput.value.trim() : '';
             const imgUrl = urlInput ? urlInput.value.trim() : '';
+            const files = pendingGalleryFiles.slice();
 
-            if (!title) { showToast('⚠️', '请先填写买图名字/描述！'); return; }
-            if (!imgUrl) { showToast('⚠️', '请粘贴图片URL或选择本地图片！'); return; }
+            if (!files.length && !imgUrl) {
+                showToast('⚠️', '请先选择本地图片或粘贴图片URL！');
+                return;
+            }
 
-            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            await saveAsset({ id, category: 'gallery', name: title, fileType: 'img', rawText: imgUrl, subCategory: currentFolderOpened || '', createdAt: Date.now() });
-
-            titleInput.value = ''; urlInput.value = '';
-            document.getElementById('galleryFileInput').value = '';
-            updateBadges(); renderItems();
-            showToast('🎉', `已成功存入买图 “${title}”！`);
+            try {
+                showToast('⌛', `正在保存 ${files.length ? files.length + ' 张图片' : '网络图片'}...`);
+                if (files.length) {
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()+i}`;
+                        await saveAsset({
+                            id: 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).slice(2, 11),
+                            category: 'gallery',
+                            name: title || name,
+                            fileType: file.type || 'image/png',
+                            cover: new Blob([file], { type: file.type || 'image/png' }),
+                            subCategory: currentFolderOpened || '',
+                            createdAt: Date.now() + i
+                        });
+                    }
+                } else {
+                    await saveAsset({
+                        id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
+                        category: 'gallery',
+                        name: title || '网络图片',
+                        fileType: 'img',
+                        rawText: imgUrl,
+                        subCategory: currentFolderOpened || '',
+                        createdAt: Date.now()
+                    });
+                }
+                pendingGalleryFiles = [];
+                if (titleInput) titleInput.value = '';
+                if (urlInput) urlInput.value = '';
+                const input = document.getElementById('galleryFileInput');
+                if (input) input.value = '';
+                allAssetsCache = null;
+                updateBadges();
+                await renderItems();
+                showToast('🎉', '已成功添加到买图库！');
+            } catch (err) {
+                console.error('Gallery save failed:', err);
+                showToast('❌', `保存失败：${err?.message || err}`);
+            }
         }
+
 
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
