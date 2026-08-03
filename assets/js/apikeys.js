@@ -392,6 +392,10 @@ async function fetchApiKeyBalance(id) {
 
     for (const path of uniquePaths) {
         const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
+        
+        let data = null;
+
+        // 1. 尝试直连
         try {
             const res = await fetch(fullUrl, {
                 method: 'GET',
@@ -400,8 +404,29 @@ async function fetchApiKeyBalance(id) {
                     'Accept': 'application/json'
                 }
             });
-            if (!res.ok) continue;
-            const data = await res.json();
+            if (res.ok) data = await res.json();
+        } catch(e) {
+            // 直连抛出 CORS/网络异常，准备走代理
+        }
+
+        // 2. 如果直连失败/跨域被拦，走隐藏的 CF Worker 代理重试
+        if (!data) {
+            try {
+                const proxyUrl = CF_PROXY_PREFIX + encodeURIComponent(fullUrl);
+                const proxyRes = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${item.apiKey}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                if (proxyRes.ok) data = await proxyRes.json();
+            } catch(e) {
+                // 代理尝试失败，继续尝试下一个路径
+            }
+        }
+
+        if (data) {
             
             // 解析常见格式
             // 1. One-API / New-API: { success: true, data: { quota: 500000, used_quota: 10000 } }
@@ -426,8 +451,6 @@ async function fetchApiKeyBalance(id) {
                 showToast('💰', `额度: ${data.quota}`);
                 return;
             }
-        } catch(e) {
-            // 继续下一个候选路径
         }
     }
 
