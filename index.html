@@ -732,13 +732,9 @@
             <!-- Custom Panel for Gallery (Bought Pictures) Area -->
             <div id="galleryBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
                 <div class="flex items-center justify-between border-b border-[#f5e1e3] pb-2 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
-                        <span class="text-xs font-bold text-[#784d52]">上传 / 存入买图相册</span>
-                    </div>
-                    <div class="text-[11px] text-[#b86b7a] font-medium">存入已购买的立绘/插画图片，支持竖版 1 排 2 张展现</div>
+                    <div class="flex items-center gap-2"><i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span class="text-xs font-bold text-[#784d52]">买图相册</span></div>
+                    <div class="text-[11px] text-[#b86b7a] font-medium">本地图片先预览，再保存</div>
                 </div>
-
                 <div class="bg-white border border-[#f2e3e3] rounded-xl p-3 space-y-2.5">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div class="md:col-span-1">
@@ -746,22 +742,19 @@
                             <input type="text" id="galleryTitleInput" placeholder="例如：买图#1、设子立绘..." class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] font-medium">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">粘贴网络图片URL (本地图片点击右侧选择即可自动存入):</label>
+                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">网络图片链接:</label>
                             <div class="flex items-center gap-2">
                                 <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
-                                <button type="button" id="galleryUploadBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-xs font-bold shadow-sm transition shrink-0 flex items-center">
-                                    <i data-lucide="image-plus" class="w-3 h-3 inline-block mr-1"></i>多选本地图片
-                                </button>
-                                <input type="file" id="galleryFileInput" accept="image/*" multiple class="opacity-0 absolute w-px h-px pointer-events-none" style="left:-9999px;">
+                                <button type="button" id="galleryUrlSaveBtn" class="px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] text-xs font-bold shrink-0">保存链接</button>
                             </div>
                         </div>
                     </div>
-                    <div class="flex justify-end pt-0.5">
-                        <button id="gallerySaveBtn" type="button" class="px-4 py-1.5 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-bold transition flex items-center gap-1.5">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            <span>添加到买图库</span>
-                        </button>
+                    <div class="flex items-center gap-2 pt-1">
+                        <button type="button" id="galleryUploadBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white text-xs font-bold shrink-0">选择本地图片</button>
+                        <input type="file" id="galleryFileInput" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="opacity-0 absolute w-px h-px pointer-events-none" style="left:-9999px;">
+                        <button type="button" id="galleryLocalSaveBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white text-xs font-bold shrink-0">保存本地图片</button>
                     </div>
+                    <div id="galleryPreview" class="hidden grid grid-cols-4 gap-2 pt-1"></div>
                 </div>
             </div>
             
@@ -1964,87 +1957,81 @@
             renderItems();
         }
         let pendingGalleryFiles = [];
+        let pendingGalleryPreviewUrls = [];
+
+        function clearGalleryPreview() {
+            pendingGalleryPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+            pendingGalleryPreviewUrls = [];
+            const box = document.getElementById('galleryPreview');
+            if (box) { box.innerHTML = ''; box.classList.add('hidden'); }
+        }
+
+        function renderGalleryPreview() {
+            const box = document.getElementById('galleryPreview');
+            if (!box) return;
+            clearGalleryPreview();
+            if (!pendingGalleryFiles.length) return;
+            box.classList.remove('hidden');
+            pendingGalleryFiles.forEach(file => {
+                const url = URL.createObjectURL(file);
+                pendingGalleryPreviewUrls.push(url);
+                const item = document.createElement('div');
+                item.className = 'aspect-square rounded-lg overflow-hidden border border-[#f2e3e3] bg-[#fdf4f5]';
+                item.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                box.appendChild(item);
+            });
+        }
 
         function bindGalleryUploadControls() {
             const input = document.getElementById('galleryFileInput');
             const chooseBtn = document.getElementById('galleryUploadBtn');
-            const saveBtn = document.getElementById('gallerySaveBtn');
             if (!input || input.dataset.bound === '1') return;
             input.dataset.bound = '1';
-            chooseBtn?.addEventListener('click', (ev) => {
-                ev.preventDefault();
-                input.click();
-            });
-            input.addEventListener('change', (ev) => {
+            chooseBtn?.addEventListener('click', ev => { ev.preventDefault(); input.click(); });
+            input.addEventListener('change', ev => {
                 pendingGalleryFiles = Array.from(ev.target.files || []);
-                if (pendingGalleryFiles.length) {
-                    showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请点击“添加到买图库”`);
-                }
+                renderGalleryPreview();
+                if (pendingGalleryFiles.length) showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请确认预览后保存`);
             });
-            saveBtn?.addEventListener('click', saveGalleryPictureAsset);
+            document.getElementById('galleryLocalSaveBtn')?.addEventListener('click', saveLocalGalleryPictures);
+            document.getElementById('galleryUrlSaveBtn')?.addEventListener('click', saveGalleryUrl);
         }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, {once:true});
+        else bindGalleryUploadControls();
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, { once: true });
-        } else {
-            bindGalleryUploadControls();
-        }
-
-        async function saveGalleryPictureAsset() {
-            const titleInput = document.getElementById('galleryTitleInput');
-            const urlInput = document.getElementById('galleryUrlInput');
-            const title = titleInput ? titleInput.value.trim() : '';
-            const imgUrl = urlInput ? urlInput.value.trim() : '';
+        async function saveLocalGalleryPictures() {
             const files = pendingGalleryFiles.slice();
-
-            if (!files.length && !imgUrl) {
-                showToast('⚠️', '请先选择本地图片或粘贴图片URL！');
-                return;
-            }
-
+            const titleInput = document.getElementById('galleryTitleInput');
+            const title = titleInput?.value.trim() || '';
+            if (!files.length) { showToast('⚠️', '请先选择本地图片'); return; }
             try {
-                showToast('⌛', `正在保存 ${files.length ? files.length + ' 张图片' : '网络图片'}...`);
-                if (files.length) {
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()+i}`;
-                        await saveAsset({
-                            id: 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).slice(2, 11),
-                            category: 'gallery',
-                            name: title || name,
-                            fileType: file.type || 'image/png',
-                            cover: new Blob([file], { type: file.type || 'image/png' }),
-                            subCategory: currentFolderOpened || '',
-                            createdAt: Date.now() + i
-                        });
-                    }
-                } else {
-                    await saveAsset({
-                        id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
-                        category: 'gallery',
-                        name: title || '网络图片',
-                        fileType: 'img',
-                        rawText: imgUrl,
-                        subCategory: currentFolderOpened || '',
-                        createdAt: Date.now()
-                    });
+                showToast('⌛', `正在保存 ${files.length} 张本地图片...`);
+                for (let i=0; i<files.length; i++) {
+                    const file = files[i];
+                    const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()+i}`;
+                    await saveAsset({ id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:title||name, fileType:file.type||'image/png', cover:new Blob([file], {type:file.type||'image/png'}), subCategory:currentFolderOpened||'', createdAt:Date.now()+i });
                 }
-                pendingGalleryFiles = [];
-                if (titleInput) titleInput.value = '';
-                if (urlInput) urlInput.value = '';
-                const input = document.getElementById('galleryFileInput');
-                if (input) input.value = '';
-                allAssetsCache = null;
-                updateBadges();
-                await renderItems();
-                showToast('🎉', '已成功添加到买图库！');
-            } catch (err) {
-                console.error('Gallery save failed:', err);
-                showToast('❌', `保存失败：${err?.message || err}`);
-            }
+                pendingGalleryFiles=[];
+                clearGalleryPreview();
+                const input=document.getElementById('galleryFileInput');
+                if (input) input.value='';
+                if (titleInput) titleInput.value='';
+                allAssetsCache=null; updateBadges(); await renderItems();
+                showToast('🎉', `已保存 ${files.length} 张本地图片`);
+            } catch (err) { console.error('local gallery save failed', err); showToast('❌', `本地图片保存失败：${err.message||err}`); }
         }
 
-
+        async function saveGalleryUrl() {
+            const urlInput=document.getElementById('galleryUrlInput');
+            const titleInput=document.getElementById('galleryTitleInput');
+            const url=urlInput?.value.trim()||'';
+            if (!/^https?:\/\//i.test(url)) { showToast('⚠️','请填写有效的图片链接'); return; }
+            try {
+                await saveAsset({id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:titleInput?.value.trim()||'网络图片', fileType:'img', rawText:url, subCategory:currentFolderOpened||'', createdAt:Date.now()});
+                if (urlInput) urlInput.value=''; if (titleInput) titleInput.value='';
+                allAssetsCache=null; updateBadges(); await renderItems(); showToast('🎉','网络图片链接已保存');
+            } catch (err) { console.error('url gallery save failed', err); showToast('❌', `网络链接保存失败：${err.message||err}`); }
+        }
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
