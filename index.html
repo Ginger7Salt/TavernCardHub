@@ -1446,6 +1446,18 @@
 
         let allAssetsCache = null;
 
+                function getAssetImageUrl(item) {
+            if (!item) return '';
+            if (item.cover instanceof Blob || item.cover instanceof File) {
+                return URL.createObjectURL(item.cover);
+            }
+            if (item.rawBuffer instanceof ArrayBuffer) {
+                const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' });
+                return URL.createObjectURL(blob);
+            }
+            return item.cover || item.rawText || '';
+        }
+
         function saveAsset(asset) {
             return new Promise((resolve, reject) => {
                 asset.createdAt = asset.createdAt || Date.now();
@@ -1958,18 +1970,13 @@
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const title = file.name.replace(/\.[^/.]+$/, '');
-                const base64Data = await new Promise((res) => {
-                    const r = new FileReader();
-                    r.onload = (ev) => res(ev.target.result);
-                    r.readAsDataURL(file);
-                });
                 const id = 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).substr(2, 9);
                 await saveAsset({ 
                     id, 
                     category: 'gallery', 
                     name: title, 
                     fileType: file.type || 'image/png', 
-                    cover: base64Data, 
+                    cover: file, 
                     subCategory: currentFolderOpened || '',
                     createdAt: Date.now() + i 
                 });
@@ -1984,7 +1991,7 @@
             allAssetsCache = null;
             updateBadges(); 
             renderItems();
-            showToast('🎉', `已成功存入 ${count} 张本地图片！`);
+            showToast('🎉', `已成功存入 ${count} 张图片！`);
         }
 
 
@@ -2140,7 +2147,7 @@
                 card.onclick = () => openDetailView(item);
 
                 if (currentTab === 'gallery') {
-                    const imgUrl = item.rawText || '';
+                    const imgUrl = getAssetImageUrl(item);
                     card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
                     card.innerHTML = `
                         <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
@@ -2226,11 +2233,11 @@
             if (item.category === 'gallery') {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('doc-full');
+                const imgUrl = getAssetImageUrl(item);
                 document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>买图大图预览</span>`;
                 document.getElementById('docFullContentText').innerHTML = `
                     <div class="flex flex-col items-center gap-3 py-2">
-                        <img src="${item.rawText || ''}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
-                        
+                        <img src="${imgUrl}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
                     </div>
                 `;
                 lucide.createIcons();
@@ -2361,8 +2368,8 @@
             if (item.category === 'gallery') {
                 const btnDownloadImg = document.createElement('button');
                 btnDownloadImg.onclick = () => {
-                    const imgUrl = item.rawText || '';
-                    if (imgUrl.startsWith('data:image')) {
+                    const imgUrl = getAssetImageUrl(item);
+                    if (imgUrl.startsWith('data:image') || imgUrl.startsWith('blob:')) {
                         const a = document.createElement('a'); a.href = imgUrl; a.download = `${item.name}.png`; a.click();
                     } else {
                         window.open(imgUrl, '_blank');
