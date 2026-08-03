@@ -1,0 +1,17 @@
+{
+  "name": "酒馆资产工坊",
+  "short_name": "TavernHub",
+  "description": "酒馆角色卡、世界书、表情包与正则规则集中管理工坊",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%237c3aed'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='bold' font-size='280' fill='%23ffffff'>T</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
