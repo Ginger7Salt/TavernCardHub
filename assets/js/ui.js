@@ -759,48 +759,88 @@ if (fileIn) {
             });
         }
 
+        let isGallerySaving = false;
+
         function bindGalleryUploadControls() {
             const input = document.getElementById('galleryFileInput');
             const chooseBtn = document.getElementById('galleryUploadBtn');
-            if (!input || input.dataset.bound === '1') return;
-            input.dataset.bound = '1';
-            chooseBtn?.addEventListener('click', ev => { ev.preventDefault(); input.click(); });
-            input.addEventListener('change', ev => {
-                pendingGalleryFiles = Array.from(ev.target.files || []);
-                renderGalleryPreview();
-                if (pendingGalleryFiles.length) showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请确认预览后保存`);
-            });
-            document.getElementById('galleryLocalSaveBtn')?.addEventListener('click', saveLocalGalleryPictures);
-            document.getElementById('galleryUrlSaveBtn')?.addEventListener('click', saveGalleryUrl);
+            const localSaveBtn = document.getElementById('galleryLocalSaveBtn');
+            const urlSaveBtn = document.getElementById('galleryUrlSaveBtn');
+
+            if (input && input.dataset.bound !== '1') {
+                input.dataset.bound = '1';
+                chooseBtn?.addEventListener('click', ev => { ev.preventDefault(); input.click(); });
+                input.addEventListener('change', ev => {
+                    pendingGalleryFiles = Array.from(ev.target.files || []);
+                    renderGalleryPreview();
+                    if (pendingGalleryFiles.length) showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请确认预览后保存`);
+                });
+            }
+
+            if (localSaveBtn && localSaveBtn.dataset.bound !== '1') {
+                localSaveBtn.dataset.bound = '1';
+                localSaveBtn.addEventListener('click', saveLocalGalleryPictures);
+            }
+
+            if (urlSaveBtn && urlSaveBtn.dataset.bound !== '1') {
+                urlSaveBtn.dataset.bound = '1';
+                urlSaveBtn.addEventListener('click', saveGalleryUrl);
+            }
         }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, {once:true});
         else bindGalleryUploadControls();
 
         async function saveLocalGalleryPictures() {
-            showToast('⌛', '正在写入本地图片...');
+            if (isGallerySaving) return; // 拦截二次重复保存
+            
             const inputNow = document.getElementById('galleryFileInput');
             if (!pendingGalleryFiles.length && inputNow && inputNow.files && inputNow.files.length) {
                 pendingGalleryFiles = Array.from(inputNow.files);
             }
+            
             const files = pendingGalleryFiles.slice();
+            pendingGalleryFiles = []; // 立刻清空全局待保存文件队列，切断重复保存数据源
+            clearGalleryPreview();
+
+            if (inputNow) inputNow.value = '';
+
             const titleInput = document.getElementById('galleryTitleInput');
             const title = titleInput?.value.trim() || '';
-            if (!files.length) { showToast('⚠️', '请先选择本地图片'); return; }
+
+            if (!files.length) { 
+                showToast('⚠️', '请先选择本地图片'); 
+                return; 
+            }
+
+            isGallerySaving = true;
             try {
                 showToast('⌛', `正在保存 ${files.length} 张本地图片...`);
-                for (let i=0; i<files.length; i++) {
+                for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-                    const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()+i}`;
-                    await saveAsset({ id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:title||name, fileType:file.type||'image/png', cover:new Blob([file], {type:file.type||'image/png'}), subCategory:currentFolderOpened||'', createdAt:Date.now()+i });
+                    const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()}_${i}`;
+                    const assetId = 'asset_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 7);
+                    await saveAsset({
+                        id: assetId,
+                        category: 'gallery',
+                        name: files.length === 1 && title ? title : (title ? `${title}_${i+1}` : name),
+                        fileType: file.type || 'image/png',
+                        cover: new Blob([file], { type: file.type || 'image/png' }),
+                        subCategory: currentFolderOpened || '',
+                        createdAt: Date.now() + i
+                    });
                 }
-                pendingGalleryFiles=[];
-                clearGalleryPreview();
-                const input=document.getElementById('galleryFileInput');
-                if (input) input.value='';
-                if (titleInput) titleInput.value='';
-                allAssetsCache=null; updateBadges(); await renderItems();
-                showToast('🎉', `已保存 ${files.length} 张本地图片`);
-            } catch (err) { console.error('local gallery save failed', err); showToast('❌', `本地图片保存失败：${err.message||err}`); }
+                
+                if (titleInput) titleInput.value = '';
+                allAssetsCache = null; 
+                updateBadges(); 
+                await renderItems();
+                showToast('🎉', `成功存入 ${files.length} 张图片`);
+            } catch (err) { 
+                console.error('local gallery save failed', err); 
+                showToast('❌', `本地图片保存失败：${err.message || err}`); 
+            } finally {
+                isGallerySaving = false;
+            }
         }
 
         async function saveGalleryUrl() {
