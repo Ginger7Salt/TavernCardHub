@@ -1,30 +1,38 @@
 // ============================================================
-// API Key Manager Module (Compact Category & Edit Support)
+// API Key Manager Module (Dynamic Categories & Adaptive Grid UI)
 // ============================================================
 
 const API_KEYS_STORAGE_KEY = 'TAVERN_API_KEYS_DATA_V1';
+const API_CATEGORIES_STORAGE_KEY = 'TAVERN_API_CATEGORIES_CUSTOM_V1';
+
+// 默认三类系统基础分类
+const DEFAULT_SYSTEM_CATEGORIES = [
+    { id: 'Relay', name: 'API 中转站', icon: '🔀' },
+    { id: 'Official', name: '官方渠道', icon: '🤖' },
+    { id: 'TTS', name: '语音服务', icon: '🎙️' }
+];
 
 const PROVIDER_PRESETS = {
-    openai: { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', balancePath: '/dashboard/billing/credit_grants', icon: '🤖', category: 'LLM' },
-    claude: { name: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1', balancePath: '', icon: '🧠', category: 'LLM' },
-    siliconflow: { name: '硅基流动 (SiliconFlow)', baseUrl: 'https://api.siliconflow.cn/v1', balancePath: '/user/info', icon: '⚡', category: 'LLM' },
-    deepseek: { name: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com/v1', balancePath: '/user/balance', icon: '🐳', category: 'LLM' },
-    zhipu: { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', balancePath: '', icon: '🔮', category: 'LLM' },
-    moonshot: { name: '月之暗面 (Kimi)', baseUrl: 'https://api.moonshot.cn/v1', balancePath: '/user/balance', icon: '🌙', category: 'LLM' },
+    oneapi: { name: '中转站 / One-API', baseUrl: 'https://your-oneapi-domain.com/v1', balancePath: '/api/user/self', icon: '🔀', category: 'Relay' },
+    openai: { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', balancePath: '/dashboard/billing/credit_grants', icon: '🤖', category: 'Official' },
+    claude: { name: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1', balancePath: '', icon: '🧠', category: 'Official' },
+    siliconflow: { name: '硅基流动 (SiliconFlow)', baseUrl: 'https://api.siliconflow.cn/v1', balancePath: '/user/info', icon: '⚡', category: 'Official' },
+    deepseek: { name: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com/v1', balancePath: '/user/balance', icon: '🐳', category: 'Official' },
+    zhipu: { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', balancePath: '', icon: '🔮', category: 'Official' },
+    moonshot: { name: '月之暗面 (Kimi)', baseUrl: 'https://api.moonshot.cn/v1', balancePath: '/user/balance', icon: '🌙', category: 'Official' },
     minimax_tts: { name: 'MiniMax 语音 (TTS)', baseUrl: 'https://api.minimax.chat/v1', balancePath: '', icon: '🎙️', category: 'TTS' },
-    volcengine_tts: { name: '火山引擎语音 (字节)', baseUrl: 'https://openspeech.bytedance.com/api/v1/tts', balancePath: '', icon: '🌋', category: 'TTS' },
-    aliyun_tts: { name: '阿里云语音 (nls)', baseUrl: 'https://nls-gateway.cn-shanghai.aliyuncs.com/stream/v1/tts', balancePath: '', icon: '☁️', category: 'TTS' },
-    tencent_tts: { name: '腾讯云语音 (TTS)', baseUrl: 'https://tts.cloud.tencent.com/stream', balancePath: '', icon: '🐧', category: 'TTS' },
-    xunfei_tts: { name: '讯飞开放平台 (TTS)', baseUrl: 'https://tts-api.xfyun.cn/v2/tts', balancePath: '', icon: '🗣️', category: 'TTS' },
+    volcengine_tts: { name: '火山引擎语音', baseUrl: 'https://openspeech.bytedance.com/api/v1/tts', balancePath: '', icon: '🌋', category: 'TTS' },
+    aliyun_tts: { name: '阿里云语音', baseUrl: 'https://nls-gateway.cn-shanghai.aliyuncs.com/stream/v1/tts', balancePath: '', icon: '☁️', category: 'TTS' },
+    tencent_tts: { name: '腾讯云语音', baseUrl: 'https://tts.cloud.tencent.com/stream', balancePath: '', icon: '🐧', category: 'TTS' },
+    xunfei_tts: { name: '讯飞开放平台', baseUrl: 'https://tts-api.xfyun.cn/v2/tts', balancePath: '', icon: '🗣️', category: 'TTS' },
     azure_speech: { name: 'Microsoft Azure Speech', baseUrl: 'https://eastasia.tts.speech.microsoft.com/cognitiveservices/v1', balancePath: '', icon: '🔷', category: 'TTS' },
     elevenlabs: { name: 'ElevenLabs', baseUrl: 'https://api.elevenlabs.io/v1', balancePath: '/user/subscription', icon: '🎧', category: 'TTS' },
     openai_tts: { name: 'OpenAI Audio TTS', baseUrl: 'https://api.openai.com/v1/audio/speech', balancePath: '', icon: '🔊', category: 'TTS' },
-    oneapi: { name: '中转站 / One-API', baseUrl: 'https://your-oneapi-domain.com/v1', balancePath: '/api/user/self', icon: '🔀', category: 'Relay' },
-    custom: { name: '自定义 OAI 兼容', baseUrl: '', balancePath: '', icon: '🔧', category: 'Custom' }
+    custom: { name: '自定义 API', baseUrl: '', balancePath: '', icon: '🔧', category: 'Relay' }
 };
 
-let activeApiKeyCategory = null; // null 表示显示分类列表，非 null 表示钻取进入具体分类
-let editingKeyId = null; // 编辑模式下的 Key ID
+let activeApiKeyCategory = null; 
+let editingKeyId = null; 
 
 function getStoredApiKeys() {
     try {
@@ -33,6 +41,19 @@ function getStoredApiKeys() {
     } catch(e) {
         return [];
     }
+}
+
+function getStoredCustomCategories() {
+    try {
+        const raw = localStorage.getItem(API_CATEGORIES_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch(e) {
+        return [];
+    }
+}
+
+function saveCustomCategories(cats) {
+    localStorage.setItem(API_CATEGORIES_STORAGE_KEY, JSON.stringify(cats));
 }
 
 function saveStoredApiKeys(keys) {
@@ -50,26 +71,33 @@ function showAddApiKeyDialog(editId = null) {
     const titleEl = document.getElementById('apiKeyModalTitle');
     const nameInput = document.getElementById('keyNameInput');
     const presetSelect = document.getElementById('keyProviderSelect');
+    const categorySelect = document.getElementById('keyCategorySelect');
+    const customCategoryInput = document.getElementById('keyCustomCategoryInput');
     const urlInput = document.getElementById('keyBaseUrlInput');
     const secretInput = document.getElementById('keySecretInput');
+
+    refreshCategorySelectOptions();
 
     if (editId) {
         const keys = getStoredApiKeys();
         const item = keys.find(k => k.id === editId);
         if (item) {
-            if (titleEl) titleEl.innerText = '✏️ 编辑 API Key 密钥';
+            if (titleEl) titleEl.innerText = '✏️ 编辑 API 密钥';
             if (nameInput) nameInput.value = item.name || '';
             if (presetSelect) presetSelect.value = item.provider || 'custom';
             if (urlInput) urlInput.value = item.baseUrl || '';
             if (secretInput) secretInput.value = item.apiKey || '';
+            if (categorySelect) categorySelect.value = item.category || 'Relay';
         }
     } else {
-        if (titleEl) titleEl.innerText = '🔑 新增 API Key 密钥';
+        if (titleEl) titleEl.innerText = '🔑 新增 API 密钥';
         if (nameInput) nameInput.value = '';
-        if (presetSelect) presetSelect.value = 'openai';
+        if (presetSelect) presetSelect.value = 'oneapi';
+        if (categorySelect) categorySelect.value = activeApiKeyCategory || 'Relay';
         onProviderPresetChange();
         if (secretInput) secretInput.value = '';
     }
+    toggleCustomCategoryInput();
     modal.classList.remove('hidden');
 }
 
@@ -82,16 +110,54 @@ function closeApiKeyModal() {
 function onProviderPresetChange() {
     const presetSelect = document.getElementById('keyProviderSelect');
     const urlInput = document.getElementById('keyBaseUrlInput');
+    const categorySelect = document.getElementById('keyCategorySelect');
     if (!presetSelect || !urlInput) return;
     const p = PROVIDER_PRESETS[presetSelect.value];
     if (p && p.baseUrl && !editingKeyId) {
         urlInput.value = p.baseUrl;
+        if (categorySelect && p.category) categorySelect.value = p.category;
     }
+}
+
+function toggleCustomCategoryInput() {
+    const categorySelect = document.getElementById('keyCategorySelect');
+    const customInputContainer = document.getElementById('customCategoryContainer');
+    if (categorySelect && customInputContainer) {
+        if (categorySelect.value === 'NEW_CUSTOM') {
+            customInputContainer.classList.remove('hidden');
+        } else {
+            customInputContainer.classList.add('hidden');
+        }
+    }
+}
+
+function refreshCategorySelectOptions() {
+    const categorySelect = document.getElementById('keyCategorySelect');
+    if (!categorySelect) return;
+
+    const customCats = getStoredCustomCategories();
+    let html = '';
+    
+    // 默认系统分类
+    DEFAULT_SYSTEM_CATEGORIES.forEach(c => {
+        html += `<option value="${c.id}">${c.icon} ${c.name}</option>`;
+    });
+
+    // 用户自定义新增的分类
+    customCats.forEach(c => {
+        html += `<option value="${c.id}">✨ ${c.name}</option>`;
+    });
+
+    // 新增自定义选项
+    html += `<option value="NEW_CUSTOM">➕ + 手动新建分类...</option>`;
+    categorySelect.innerHTML = html;
 }
 
 function submitSaveApiKey() {
     const nameInput = document.getElementById('keyNameInput');
     const presetSelect = document.getElementById('keyProviderSelect');
+    const categorySelect = document.getElementById('keyCategorySelect');
+    const customCategoryInput = document.getElementById('keyCustomCategoryInput');
     const urlInput = document.getElementById('keyBaseUrlInput');
     const secretInput = document.getElementById('keySecretInput');
 
@@ -103,12 +169,26 @@ function submitSaveApiKey() {
     if (!name) { showToast('⚠️', '请输入 Key 名称'); return; }
     if (!apiKey) { showToast('⚠️', '请输入 API Key 秘钥'); return; }
 
+    let selectedCat = categorySelect ? categorySelect.value : 'Relay';
+
+    // 如果是新建分类
+    if (selectedCat === 'NEW_CUSTOM') {
+        const newCatName = customCategoryInput ? customCategoryInput.value.trim() : '';
+        if (!newCatName) { showToast('⚠️', '请输入自定义分类名称'); return; }
+        
+        const catId = 'cat_' + Date.now();
+        const customCats = getStoredCustomCategories();
+        customCats.push({ id: catId, name: newCatName, icon: '✨' });
+        saveCustomCategories(customCats);
+        selectedCat = catId;
+    }
+
     let keys = getStoredApiKeys();
 
     if (editingKeyId) {
         keys = keys.map(k => {
             if (k.id === editingKeyId) {
-                return { ...k, name, provider, baseUrl, apiKey, updatedAt: Date.now() };
+                return { ...k, name, provider, category: selectedCat, baseUrl, apiKey, updatedAt: Date.now() };
             }
             return k;
         });
@@ -118,6 +198,7 @@ function submitSaveApiKey() {
             id: 'key_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
             name,
             provider,
+            category: selectedCat,
             baseUrl,
             apiKey,
             createdAt: Date.now()
@@ -159,10 +240,10 @@ function createApiKeyModalDom() {
         }
 
         modal.innerHTML = `
-        <div class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-3 border border-[#f2e3e3]">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-2.5 border border-[#f2e3e3]">
             <div class="flex items-center justify-between border-b border-[#f7ecee] pb-2">
                 <h3 id="apiKeyModalTitle" class="font-bold text-xs text-[#4a3e3d] flex items-center gap-1.5">
-                    <span>🔑</span> 新增 API Key 密钥
+                    <span>🔑</span> 新增 API 密钥
                 </h3>
                 <button onclick="closeApiKeyModal()" class="text-gray-400 hover:text-gray-600 text-base font-bold">&times;</button>
             </div>
@@ -170,18 +251,30 @@ function createApiKeyModalDom() {
             <div class="space-y-2 text-[11px]">
                 <div>
                     <label class="block font-semibold text-[#785e60] mb-0.5">密钥名称 / 备注</label>
-                    <input id="keyNameInput" type="text" placeholder="例: 我的 MiniMax / 硅基流动" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d88c9a]">
+                    <input id="keyNameInput" type="text" placeholder="例: 吾爱 API / 个人自建" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d88c9a]">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-[#785e60] mb-0.5">服务商预设</label>
+                        <select id="keyProviderSelect" onchange="onProviderPresetChange()" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#d88c9a] text-[10px]">
+                            ${providerOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-[#785e60] mb-0.5">所属分类</label>
+                        <select id="keyCategorySelect" onchange="toggleCustomCategoryInput()" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#d88c9a] text-[10px]">
+                        </select>
+                    </div>
+                </div>
+
+                <div id="customCategoryContainer" class="hidden">
+                    <label class="block font-semibold text-[#d88c9a] mb-0.5">新建分类名称</label>
+                    <input id="keyCustomCategoryInput" type="text" placeholder="输入自定义分类名称，如: 画图通道" class="w-full bg-[#fdf6f7] border border-[#d88c9a]/40 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d88c9a]">
                 </div>
 
                 <div>
-                    <label class="block font-semibold text-[#785e60] mb-0.5">服务商预设</label>
-                    <select id="keyProviderSelect" onchange="onProviderPresetChange()" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d88c9a]">
-                        ${providerOptions}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block font-semibold text-[#785e60] mb-0.5">Base URL (接口请求基地址)</label>
+                    <label class="block font-semibold text-[#785e60] mb-0.5">Base URL (请求基地址)</label>
                     <input id="keyBaseUrlInput" type="text" placeholder="https://..." class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#d88c9a] font-mono text-[10px]">
                 </div>
 
@@ -191,7 +284,7 @@ function createApiKeyModalDom() {
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 pt-1 border-t border-[#f7ecee]">
+            <div class="flex justify-end gap-2 pt-1.5 border-t border-[#f7ecee]">
                 <button onclick="closeApiKeyModal()" class="px-3 py-1 rounded-full border border-gray-300 text-gray-600 text-[11px] hover:bg-gray-50 transition">取消</button>
                 <button onclick="submitSaveApiKey()" class="px-3.5 py-1 rounded-full bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] shadow-sm transition">保存</button>
             </div>
@@ -201,7 +294,6 @@ function createApiKeyModalDom() {
     }
 }
 
-// 筛选分类
 function selectApiKeyCategory(catKey) {
     activeApiKeyCategory = catKey;
     renderApiKeyList();
@@ -215,48 +307,54 @@ function renderApiKeyList() {
     const countBadge = document.getElementById('tab-apikeys-count');
     if (countBadge) countBadge.innerText = keys.length;
 
-    if (keys.length === 0) {
-        container.innerHTML = `
-            <div class="col-span-full py-12 text-center text-[#b89b9d]">
-                <div class="text-2xl mb-1">🔑</div>
-                <p class="text-xs font-semibold">暂未保存任何 API 密钥</p>
-                <p class="text-[10px] opacity-75 mt-0.5">点击上方 “+ 新增密钥” 开始配置</p>
-            </div>
-        `;
-        return;
-    }
-
-    // 按分类归集统计
-    const categoryGroups = {
-        LLM: { name: 'LLM 大语言模型', icon: '🤖', items: [] },
-        TTS: { name: 'TTS 语音服务', icon: '🎙️', items: [] },
-        Relay: { name: 'API 中转站', icon: '🔀', items: [] },
-        Custom: { name: '自定义 OAI 兼容', icon: '🔧', items: [] }
-    };
-
-    keys.forEach(k => {
-        const preset = PROVIDER_PRESETS[k.provider] || PROVIDER_PRESETS.custom;
-        const cat = preset.category || 'Custom';
-        if (categoryGroups[cat]) categoryGroups[cat].items.push(k);
-        else categoryGroups.Custom.items.push(k);
+    // 整合系统默认分类与用户自定义分类
+    const allCategoriesMap = {};
+    DEFAULT_SYSTEM_CATEGORIES.forEach(c => {
+        allCategoriesMap[c.id] = { id: c.id, name: c.name, icon: c.icon, items: [] };
     });
 
-    // 视角 1：分类选择网格（未选择具体分类时）
+    const customCats = getStoredCustomCategories();
+    customCats.forEach(c => {
+        allCategoriesMap[c.id] = { id: c.id, name: c.name, icon: c.icon || '✨', items: [] };
+    });
+
+    // 将密钥归集到对应分类
+    keys.forEach(k => {
+        let cat = k.category;
+        if (!cat) {
+            const preset = PROVIDER_PRESETS[k.provider] || PROVIDER_PRESETS.custom;
+            cat = preset.category || 'Relay';
+        }
+        if (allCategoriesMap[cat]) {
+            allCategoriesMap[cat].items.push(k);
+        } else {
+            // 如果指派了不存在的分类，分配至 Relay 或新增该临时映射
+            if (!allCategoriesMap['Relay']) allCategoriesMap['Relay'] = { id: 'Relay', name: 'API 中转站', icon: '🔀', items: [] };
+            allCategoriesMap['Relay'].items.push(k);
+        }
+    });
+
+    // 视角 1：自适应美化分类网格 (未选择具体分类时)
     if (!activeApiKeyCategory) {
-        let html = `<div class="grid grid-cols-2 gap-2 pb-1">`;
-        for (const catKey in categoryGroups) {
-            const group = categoryGroups[catKey];
+        let html = `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 pb-2">`;
+        
+        for (const catId in allCategoriesMap) {
+            const group = allCategoriesMap[catId];
             const count = group.items.length;
+            
             html += `
-                <div onclick="selectApiKeyCategory('${catKey}')" class="bg-white border border-[#f2e3e3] rounded-xl p-2.5 flex items-center justify-between cursor-pointer hover:border-[#d88c9a] hover:bg-[#fdf6f7] transition shadow-2xs">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg">${group.icon}</span>
-                        <div>
-                            <div class="text-xs font-bold text-[#4a3e3d]">${group.name}</div>
-                            <div class="text-[10px] text-[#8c7476] opacity-80">${count} 个密钥</div>
+                <div onclick="selectApiKeyCategory('${catId}')" class="group bg-gradient-to-b from-white to-[#fdf8f8] border border-[#f2e3e3] rounded-2xl p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xl p-1.5 rounded-xl bg-[#f8eeee] group-hover:bg-[#f2dadc] transition">${group.icon}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${count > 0 ? 'bg-[#d88c9a]/10 text-[#d88c9a]' : 'bg-gray-100 text-gray-400'}">${count} 项</span>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-[#4a3e3d] group-hover:text-[#d88c9a] transition truncate">${group.name}</div>
+                        <div class="text-[9px] text-[#8c7476] opacity-75 mt-0.5 flex items-center justify-between">
+                            <span>点击进入</span>
+                            <span class="text-gray-300 group-hover:text-[#d88c9a] transition">›</span>
                         </div>
                     </div>
-                    <span class="text-gray-300 text-xs">›</span>
                 </div>
             `;
         }
@@ -265,24 +363,27 @@ function renderApiKeyList() {
         return;
     }
 
-    // 视角 2：分类二级列表（点击进入某个分类后，精简极窄卡片行）
-    const activeGroup = categoryGroups[activeApiKeyCategory] || categoryGroups.Custom;
+    // 视角 2：分类二级列表 (点击进入具体分类后，极窄紧凑行)
+    const activeGroup = allCategoriesMap[activeApiKeyCategory] || { name: '分类查看', icon: '🔑', items: [] };
     const catKeys = activeGroup.items;
 
     let html = `
         <div class="space-y-1.5">
             <div class="flex items-center justify-between pb-1 text-xs">
-                <button onclick="selectApiKeyCategory(null)" class="text-[#d88c9a] font-bold hover:underline flex items-center gap-1 text-[11px]">
+                <button onclick="selectApiKeyCategory(null)" class="text-[#d88c9a] font-bold hover:underline flex items-center gap-1 text-[11px] bg-[#f8eeee] px-2.5 py-1 rounded-full hover:bg-[#f2dadc] transition">
                     ‹ 返回分类列表
                 </button>
-                <span class="text-[#785e60] font-semibold text-[11px]">${activeGroup.icon} ${activeGroup.name} (${catKeys.length})</span>
+                <span class="text-[#785e60] font-bold text-[11px] flex items-center gap-1">
+                    <span>${activeGroup.icon}</span> ${activeGroup.name} (${catKeys.length})
+                </span>
             </div>
     `;
 
     if (catKeys.length === 0) {
         html += `
-            <div class="py-8 text-center text-[#b89b9d] text-xs">
-                该分类下暂无已保存密钥
+            <div class="py-12 text-center text-[#b89b9d] text-xs bg-white rounded-2xl border border-[#f2e3e3]">
+                <div class="text-lg mb-1">📭</div>
+                该分类下暂无已保存的 API 密钥
             </div>
         `;
     } else {
@@ -318,7 +419,7 @@ function renderApiKeyList() {
     if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
-// 弹窗与逻辑 hook
+// 挂载全局逻辑
 window.showAddApiKeyDialog = showAddApiKeyDialog;
 window.closeApiKeyModal = closeApiKeyModal;
 window.submitSaveApiKey = submitSaveApiKey;
@@ -327,6 +428,7 @@ window.renderApiKeyList = renderApiKeyList;
 window.deleteApiKeyItem = deleteApiKeyItem;
 window.copyApiKeyText = copyApiKeyText;
 window.selectApiKeyCategory = selectApiKeyCategory;
+window.toggleCustomCategoryInput = toggleCustomCategoryInput;
 
 
 async function openApiKeyDetailModal(id) {
