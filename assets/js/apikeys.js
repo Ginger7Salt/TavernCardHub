@@ -284,7 +284,7 @@ function createApiKeyModalDom() {
 }
 
 function renderApiKeyList() {
-    const container = document.getElementById('apikeysListContainer');
+    const container = document.getElementById('apikeyList') || document.getElementById('apikeysListContainer');
     if (!container) return;
 
     const keys = getStoredApiKeys();
