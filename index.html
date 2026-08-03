@@ -1964,16 +1964,24 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             const galleryInput = document.getElementById('galleryFileInput');
+            const galleryUploadBtn = document.getElementById('galleryUploadBtn');
             if (galleryInput) {
                 galleryInput.addEventListener('change', handleGalleryFileUpload);
+            }
+            if (galleryUploadBtn && galleryInput) {
+                galleryUploadBtn.addEventListener('click', () => galleryInput.click());
             }
         });
 
         
         document.addEventListener('DOMContentLoaded', () => {
             const galleryInput = document.getElementById('galleryFileInput');
+            const galleryUploadBtn = document.getElementById('galleryUploadBtn');
             if (galleryInput) {
                 galleryInput.addEventListener('change', handleGalleryFileUpload);
+            }
+            if (galleryUploadBtn && galleryInput) {
+                galleryUploadBtn.addEventListener('click', () => galleryInput.click());
             }
         });
 
