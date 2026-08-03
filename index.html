@@ -2111,7 +2111,7 @@
                     const imgUrl = item.rawText || '';
                     card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
                     card.innerHTML = `
-                        <div class="aspect-[3/4] rounded-xl overflow-hidden bg-[#fdf4f5] mb-1.5 border border-[#f5e1e3] flex items-center justify-center p-0.5">
+                        <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
                             <img src="${imgUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.src='https://placehold.co/300x400/fdf4f5/d88c9a?text=图片加载失败'">
                         </div>
                         <div>
