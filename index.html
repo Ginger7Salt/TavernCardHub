@@ -113,6 +113,13 @@
                     <span id="badge-docs" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
+                <button onclick="switchTab('apikeys')" id="tab-apikeys" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="key-round" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span>API 密钥</span>
+                    </div>
+                    <span id="apikeyCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
+                </button>
                 <button onclick="switchTab('gallery')" id="tab-gallery" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
@@ -333,6 +340,20 @@
             </div>
 
             <!-- Custom Panel for Gallery (Bought Pictures) Area -->
+            <div id="apikeysBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
+                <div class="flex items-center justify-between border-b border-[#f5e1e3] pb-2 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="key-round" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span class="text-xs font-bold text-[#784d52]">API 密钥管理</span>
+                    </div>
+                    <div class="text-[11px] text-[#b86b7a] font-medium">多服务商支持 · 连通测试 · 余额查询</div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="showAddApiKeyDialog()" class="px-3.5 py-1.5 bg-[#d88c9a] hover:bg-[#c97b8b] text-white text-xs font-bold rounded-lg shadow-sm transition">+ 新增密钥</button>
+                    <button onclick="testAllApiKeys()" class="px-3.5 py-1.5 bg-white border border-[#f2dadc] text-[#784d52] text-xs font-bold rounded-lg hover:bg-[#fdf4f5] transition">🔌 全部测试</button>
+                </div>
+                <div id="apikeyList" class="space-y-2.5 pt-1"></div>
+            </div>
             <div id="galleryBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
                 <div class="flex items-center justify-between border-b border-[#f5e1e3] pb-2 flex-wrap gap-2">
                     <div class="flex items-center gap-2"><i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span class="text-xs font-bold text-[#784d52]">买图相册</span></div>
@@ -621,6 +642,7 @@
 
     <script src="assets/js/core.js"></script>
     <script src="assets/js/sync.js"></script>
+    <script src="assets/js/apikeys.js"></script>
     <script src="assets/js/ui.js"></script>
     <script src="assets/js/font.js"></script>
 </body>

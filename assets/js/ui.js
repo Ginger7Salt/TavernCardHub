@@ -2,7 +2,10 @@ function switchTab(tab) {
     currentTab = tab;
     closeDetailView();
     toggleSidebar();
-    
+
+    const apikeysPanel = document.getElementById('apikeysBuilderPanel');
+    if (apikeysPanel) apikeysPanel.classList.add('hidden');
+
     const fontsPanel = document.getElementById('fontsBuilderPanel');
     const galleryPanel = document.getElementById('galleryBuilderPanel');
     const extrasPanel = document.getElementById('extrasBuilderPanel');
@@ -22,6 +25,11 @@ function switchTab(tab) {
         if (itemsGrid) itemsGrid.classList.add('hidden');
         if (searchBar) searchBar.classList.add('hidden');
         if (typeof renderList === 'function') renderList();
+    } else if (tab === 'apikeys') {
+        if (apikeysPanel) apikeysPanel.classList.remove('hidden');
+        if (typeof renderApiKeyList === 'function') renderApiKeyList();
+        if (itemsGrid) itemsGrid.classList.add('hidden');
+        if (searchBar) searchBar.classList.add('hidden');
     } else if (tab === 'gallery') {
         if (galleryPanel) galleryPanel.classList.remove('hidden');
         renderItems();
@@ -801,6 +809,8 @@ function switchTab(tab) {
             const builderPanel = document.getElementById('emojiExportBuilderPanel');
             const extrasPanel = document.getElementById('extrasBuilderPanel');
             const galleryPanel = document.getElementById('galleryBuilderPanel');
+            const apikeysPanel = document.getElementById('apikeysBuilderPanel');
+            if (apikeysPanel) apikeysPanel.classList.add('hidden');
             
             if (currentTab === 'emojis') { 
                 builderPanel.classList.remove('hidden'); 
