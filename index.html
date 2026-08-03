@@ -749,10 +749,10 @@
                             <label class="block text-[11px] font-bold text-[#784d52] mb-1">粘贴网络图片URL (本地图片点击右侧选择即可自动存入):</label>
                             <div class="flex items-center gap-2">
                                 <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
-                                <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-xs font-bold shadow-sm transition shrink-0">
+                                <button type="button" id="galleryUploadBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-xs font-bold shadow-sm transition shrink-0 flex items-center">
                                     <i data-lucide="image-plus" class="w-3 h-3 inline-block mr-1"></i>多选本地图片
-                                    <input type="file" id="galleryFileInput" accept="image/*" multiple class="hidden" onchange="handleGalleryFileUpload(event)">
-                                </label>
+                                </button>
+                                <input type="file" id="galleryFileInput" accept="image/*" multiple class="opacity-0 absolute w-px h-px pointer-events-none" style="left:-9999px;">
                             </div>
                         </div>
                     </div>
