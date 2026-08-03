@@ -380,9 +380,6 @@
                                 <button onclick="appendEmojiVariable('{url}')" class="variable-chip bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2]">
                                     + {url} 完整直链
                                 </button>
-                                <button onclick="appendEmojiVariable('{code}')" class="variable-chip bg-[#e8f3ef] text-[#5b8a7f] hover:bg-[#d8ebe5]">
-                                    + {code} 短码/文件名
-                                </button>
                                 <button onclick="clearEmojiFormatTokens()" class="text-[10px] text-rose-500 hover:underline ml-auto">
                                     清空拼接
                                 </button>
@@ -889,13 +886,12 @@
         function renderEmojiFormatPreview() {
             const el = document.getElementById('emojiFormatPreviewText');
             if (!el) return;
-            const sample = { name: '败犬表情', url: 'https://catbox.moe/2a9w.jpg', code: '2a9w.jpg' };
+            const sample = { name: '败犬表情', url: 'https://catbox.moe/2a9w.jpg' };
             let out = '';
             emojiTokens.forEach(tok => {
                 if (tok.type === 'sep') out += tok.value;
                 else if (tok.value === '{name}') out += sample.name;
                 else if (tok.value === '{url}') out += sample.url;
-                else if (tok.value === '{code}') out += sample.code;
             });
             el.innerText = out || '(无表达)';
         }
@@ -903,14 +899,12 @@
         function formatEmojiSingleItem(item) {
             let out = '';
             const url = item.url || '';
-            const code = item.code || (url.split('/').pop().split('?')[0]) || '';
             const name = item.name || '表情';
 
             emojiTokens.forEach(tok => {
                 if (tok.type === 'sep') out += tok.value;
                 else if (tok.value === '{name}') out += name;
                 else if (tok.value === '{url}') out += url;
-                else if (tok.value === '{code}') out += code;
             });
             return out;
         }
