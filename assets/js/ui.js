@@ -987,6 +987,7 @@ if (fileIn) {
                 const card = document.createElement('div');
                 const isSelected = selectedAssetIds.has(item.id);
                 
+                card.setAttribute('data-asset-id', item.id);
                 card.className = `ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group ${isSelected ? 'ring-2 ring-[#d88c9a] bg-[#fdf6f7]' : ''}`;
                 
                 // 绑定长按事件
@@ -1002,9 +1003,9 @@ if (fileIn) {
 
                 if (currentTab === 'gallery') {
                     const imgUrl = getAssetImageUrl(item);
-                    card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
+                    card.className = `ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group ${isSelected ? 'ring-2 ring-[#d88c9a] bg-[#fdf6f7]' : ''}`;
                     card.innerHTML = `
-                        <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
+                        <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5 relative">
                             <img src="${imgUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.src='https://placehold.co/300x400/fdf4f5/d88c9a?text=图片加载失败'">
                         </div>
                         <div>
@@ -1038,10 +1039,10 @@ if (fileIn) {
                     }
                     card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 3).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}${item.tags.length > 3 ? `<span class="text-[9px] text-[#a38b8d]">+${item.tags.length - 3}</span>` : ''}</div>` : ''}</div>`;
                 }
-                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                // 如果处于批量多选模式，在卡片右上角统一注入精致勾选红点圆框
                 if (isMultiSelectMode) {
                     const checkBadge = document.createElement('div');
-                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.className = `selection-badge absolute top-2 right-2 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md transition ${isSelected ? 'bg-[#d88c9a] text-white scale-110' : 'bg-white/90 border border-gray-300 text-transparent'}`;
                     checkBadge.innerHTML = '✓';
                     checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
                     card.appendChild(checkBadge);
@@ -1385,10 +1386,10 @@ if (fileIn) {
                 const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词'), commentTitle = entry.comment || keysText || `词条 #${index + 1}`;
                 const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
                 card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="flex items-center gap-2 min-w-0 flex-1"><i data-lucide="grip-vertical" class="w-4 h-4 text-[#e2c2c6] shrink-0"></i><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWbEntrySelection(${index}, event)" class="w-4 h-4 text-[#d88c9a] rounded border-[#f2e3e3] cursor-pointer"><button onclick="toggleWbEntryCollapse(${index})" class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1 truncate"><i data-lucide="chevron-down" id="wb-chevron-${index}" class="w-3.5 h-3.5 text-[#d88c9a] shrink-0 transition-transform duration-200"></i><span class="truncate">词条 · ${commentTitle}</span></button></div><div class="flex items-center gap-1.5 shrink-0"><span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-[#e8f0f8] text-[#688ca6]' : 'bg-[#f5e8e8] text-[#8c7173]'}">${entry.constant ? '🔵 始终' : '⚪ 条件'}</span><button onclick="copyEntryContent(${index})" class="p-1 rounded text-[#a38b8d] hover:text-[#d88c9a]"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button><button onclick="deleteEntry(${index})" class="p-1 rounded text-[#a38b8d] hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div><div id="wb-body-${index}" class="space-y-3 hidden"><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">标题 / 注释</label><input type="text" value="${commentTitle}" onchange="updateEntryField(${index}, 'comment', this.value)" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-xl px-3 py-1.5 text-xs font-medium text-[#5c494a]"></div><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">内容</label><textarea onchange="updateEntryField(${index}, 'content', this.value)" class="w-full h-36 bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#5c494a] custom-scrollbar">${entry.content || ''}</textarea></div></div>`;
-                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                // 如果处于批量多选模式，在卡片右上角统一注入精致勾选红点圆框
                 if (isMultiSelectMode) {
                     const checkBadge = document.createElement('div');
-                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.className = `selection-badge absolute top-2 right-2 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md transition ${isSelected ? 'bg-[#d88c9a] text-white scale-110' : 'bg-white/90 border border-gray-300 text-transparent'}`;
                     checkBadge.innerHTML = '✓';
                     checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
                     card.appendChild(checkBadge);
@@ -1418,10 +1419,10 @@ if (fileIn) {
             scripts.forEach((script, idx) => {
                 const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
                 card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="font-bold text-xs text-[#4a3e3d] flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5 text-[#d88c9a]"></i><span>${script.scriptName || `正则规则 #${idx + 1}`}</span></div></div><div><div class="bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#b86b7a] break-all">${script.findRegex || ''}</div></div>`;
-                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                // 如果处于批量多选模式，在卡片右上角统一注入精致勾选红点圆框
                 if (isMultiSelectMode) {
                     const checkBadge = document.createElement('div');
-                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.className = `selection-badge absolute top-2 right-2 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md transition ${isSelected ? 'bg-[#d88c9a] text-white scale-110' : 'bg-white/90 border border-gray-300 text-transparent'}`;
                     checkBadge.innerHTML = '✓';
                     checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
                     card.appendChild(checkBadge);
@@ -1500,13 +1501,34 @@ function toggleMultiSelectMode(enable = null) {
 
 function toggleSelectAsset(id, e) {
     if (e) e.stopPropagation();
-    if (selectedAssetIds.has(id)) {
+    const isSelected = selectedAssetIds.has(id);
+    if (isSelected) {
         selectedAssetIds.delete(id);
     } else {
         selectedAssetIds.add(id);
     }
+    
+    // 更新底栏计数
     renderBatchActionBar();
-    renderItems();
+    
+    // 局部静默更新当前卡片，绝不重新渲染整个页面（防闪烁卡顿）
+    const card = document.querySelector(`[data-asset-id="${id}"]`);
+    if (card) {
+        const checkBadge = card.querySelector('.selection-badge');
+        const nowSelected = selectedAssetIds.has(id);
+        
+        if (nowSelected) {
+            card.classList.add('ring-2', 'ring-[#d88c9a]', 'bg-[#fdf6f7]');
+            if (checkBadge) {
+                checkBadge.className = 'selection-badge absolute top-2 right-2 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md transition bg-[#d88c9a] text-white scale-110';
+            }
+        } else {
+            card.classList.remove('ring-2', 'ring-[#d88c9a]', 'bg-[#fdf6f7]');
+            if (checkBadge) {
+                checkBadge.className = 'selection-badge absolute top-2 right-2 z-30 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition bg-white/90 border border-gray-300 text-transparent';
+            }
+        }
+    }
 }
 
 async function selectAllCurrentAssets() {
