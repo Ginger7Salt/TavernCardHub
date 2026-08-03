@@ -96,7 +96,25 @@ lucide.createIcons();
 
             try {
                 const localAssets = await getAllAssets();
-                const jsonString = JSON.stringify({ version: '2.0', timestamp: Date.now(), total: localAssets.length, assets: localAssets }, null, 2);
+                const apiKeys = (typeof getStoredApiKeys === 'function') ? getStoredApiKeys() : [];
+                const apiCategories = (typeof getStoredCustomCategories === 'function') ? getStoredCustomCategories() : [];
+                let fonts = [];
+                if (typeof getAllFonts === 'function') {
+                    try { fonts = await getAllFonts(); } catch(e){}
+                }
+                
+                const backupPayload = {
+                    version: '3.0',
+                    timestamp: Date.now(),
+                    totalAssets: localAssets.length,
+                    totalKeys: apiKeys.length,
+                    totalFonts: fonts.length,
+                    assets: localAssets,
+                    apiKeys: apiKeys,
+                    apiCategories: apiCategories,
+                    fonts: fonts
+                };
+                const jsonString = JSON.stringify(backupPayload, null, 2);
                 
                 // UTF-8 base64 encoding
                 const bytes = new TextEncoder().encode(jsonString);
@@ -167,16 +185,47 @@ lucide.createIcons();
                 const jsonText = new TextDecoder().decode(bytes);
                 const parsedData = JSON.parse(jsonText);
 
-                if (parsedData && parsedData.assets && Array.isArray(parsedData.assets)) {
+                if (parsedData && (parsedData.assets || parsedData.apiKeys || parsedData.fonts)) {
                     let restoredCount = 0;
-                    for (let asset of parsedData.assets) {
-                        const tx = db.transaction('assets', 'readwrite');
-                        tx.objectStore('assets').put(asset);
-                        restoredCount++;
+                    if (parsedData.assets && Array.isArray(parsedData.assets)) {
+                        for (let asset of parsedData.assets) {
+                            const tx = db.transaction('assets', 'readwrite');
+                            tx.objectStore('assets').put(asset);
+                            restoredCount++;
+                        }
                     }
+                    
+                    // 1. 恢复 API Key 列表与自定义分类
+                    let keyCount = 0;
+                    if (parsedData.apiKeys && Array.isArray(parsedData.apiKeys)) {
+                        if (typeof saveStoredApiKeys === 'function') {
+                            saveStoredApiKeys(parsedData.apiKeys);
+                        } else {
+                            localStorage.setItem('TAVERN_API_KEYS', JSON.stringify(parsedData.apiKeys));
+                        }
+                        keyCount = parsedData.apiKeys.length;
+                    }
+                    if (parsedData.apiCategories && Array.isArray(parsedData.apiCategories)) {
+                        if (typeof saveCustomCategories === 'function') {
+                            saveCustomCategories(parsedData.apiCategories);
+                        } else {
+                            localStorage.setItem('TAVERN_API_CUSTOM_CATEGORIES', JSON.stringify(parsedData.apiCategories));
+                        }
+                    }
+                    if (typeof renderApiKeyList === 'function') renderApiKeyList();
+
+                    // 2. 恢复 字体 (Fonts) 到 IndexedDB
+                    let fontCount = 0;
+                    if (parsedData.fonts && Array.isArray(parsedData.fonts) && typeof addFontItem === 'function') {
+                        for (let font of parsedData.fonts) {
+                            try { await addFontItem(font); fontCount++; } catch(e){}
+                        }
+                        if (typeof renderFontList === 'function') renderFontList();
+                    }
+
                     allAssetsCache = null;
                     updateBadges(); renderItems();
-                    showToast('🎉', `成功从 GitHub 拉回恢复 ${restoredCount} 项全量资产！`);
+                    showToast('🎉', `恢复成功：${restoredCount} 项资产、${keyCount} 个 API Key、${fontCount} 款字体！`);
                 } else {
                     showToast('⚠️', '备份文件格式不兼容');
                 }

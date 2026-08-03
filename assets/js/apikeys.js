@@ -60,6 +60,7 @@ function saveStoredApiKeys(keys) {
     localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(keys));
     renderApiKeyList();
     if (typeof updateBadges === 'function') updateBadges();
+    if (typeof syncApiKeysToCloudSilent === 'function') syncApiKeysToCloudSilent(keys);
 }
 
 function showAddApiKeyDialog(editId = null) {

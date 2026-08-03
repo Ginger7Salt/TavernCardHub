@@ -378,6 +378,7 @@ if (fileIn) {
                     }
                 }
 
+                await syncApiKeysToCloudSilent();
                 document.getElementById('cloudStatusBadge').innerText = '同步完成';
                 showToast('✅', `增量同步完成！本次仅上传了 ${syncedCount} 个变动资产`);
             } catch(e) { showToast('❌', '增量同步失败，请检查网络'); }
@@ -1768,3 +1769,21 @@ async function submitSavePastedDoc() {
 
 window.toggleDocImportDrawer = toggleDocImportDrawer;
 window.submitSavePastedDoc = submitSavePastedDoc;
+
+
+        async function syncApiKeysToCloudSilent(keys = null) {
+            if (!supabaseClient) return;
+            try {
+                const apiKeys = keys || ((typeof getStoredApiKeys === 'function') ? getStoredApiKeys() : []);
+                const apiCategories = (typeof getStoredCustomCategories === 'function') ? getStoredCustomCategories() : [];
+                const payload = { keys: apiKeys, categories: apiCategories };
+                await supabaseClient.from('tavern_assets').upsert({
+                    id: '___API_KEYS_CONFIG___',
+                    category: 'apikeys',
+                    name: 'API 密钥与分类配置备份',
+                    file_type: 'json',
+                    card_data: payload,
+                    created_at: Date.now()
+                });
+            } catch(e) { console.error('Sync API keys to cloud failed', e); }
+        }
