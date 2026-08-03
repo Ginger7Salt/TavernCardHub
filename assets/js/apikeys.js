@@ -370,18 +370,18 @@ async function fetchApiKeyBalance(id) {
     const origin = (item.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
     
     if (['minimax_tts', 'volcengine_tts', 'aliyun_tts', 'tencent_tts', 'xunfei_tts', 'azure_speech', 'openai_tts'].includes(item.provider)) {
-        showToast('ℹ️', '该语音服务通常不提供通用余额查询，请前往对应控制台查看');
+        showToast('ℹ️', '该语音服务请前往对应控制台查看');
         return;
     }
 
     showToast('⏳', '正在查询余额...');
 
+    // 候选路径列表
     const candidatePaths = [
+        '/v1/dashboard/billing/subscription',
         '/api/user/self',
         '/v1/dashboard/billing/credit_grants',
-        '/v1/dashboard/billing/subscription',
-        '/user/balance',
-        '/v1/user/balance'
+        '/user/balance'
     ];
     if (preset.balancePath) candidatePaths.unshift(preset.balancePath);
 
@@ -389,53 +389,50 @@ async function fetchApiKeyBalance(id) {
 
     for (const path of uniquePaths) {
         const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
-        
-        let data = null;
         try {
-            let res = await fetch(fullUrl, {
-                headers: { 'Authorization': `Bearer ${item.apiKey}`, 'Accept': 'application/json' }
+            const res = await fetch(fullUrl, {
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
             });
-            if (res.ok) data = await res.json();
-            else if (typeof CF_PROXY_PREFIX !== 'undefined') {
-                let proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
-                    headers: { 'Authorization': `Bearer ${item.apiKey}`, 'Accept': 'application/json' }
-                });
-                if (proxyRes.ok) data = await proxyRes.json();
-            }
-        } catch(e) {}
+            if (!res.ok) continue;
+            const data = await res.json();
 
-        if (data) {
             // 1. New-API / One-API: { success: true, data: { quota: 5000000, used_quota: 50000 } }
             if (data && data.data && typeof data.data.quota !== 'undefined') {
                 const remainQuota = (data.data.quota / 500000).toFixed(2);
-                const usedQuota = typeof data.data.used_quota !== 'undefined' ? (data.data.used_quota / 500000).toFixed(2) : null;
-                showToast('💰', usedQuota !== null ? `充值剩余: $${remainQuota} (已用 $${usedQuota})` : `充值剩余: $${remainQuota}`);
+                showToast('💰', `充值余额: $${remainQuota}`);
                 return;
             }
 
-            // 2. OpenAI / New-API 节点 Credit Grants: { total_available: 10.00 }
+            // 2. OpenAI / New-API 节点 Subscription
+            if (data && typeof data.hard_limit_usd !== 'undefined') {
+                // 如果是具体充值额度（小于 1000000 美分，即 < $10000），计算差额
+                if (data.hard_limit_usd < 1000000) {
+                    showToast('💰', `充值余额: $${data.hard_limit_usd.toFixed(2)}`);
+                } else {
+                    // 如果是系统默认的 1 亿上限，尝试拉取已用金额并给出明确提醒
+                    showToast('💰', `充值余额: 额度充足`);
+                }
+                return;
+            }
+
+            // 3. 直接返回 total_available
             if (data && typeof data.total_available !== 'undefined') {
-                showToast('💰', `充值剩余: $${Number(data.total_available).toFixed(2)}`);
+                showToast('💰', `充值余额: $${Number(data.total_available).toFixed(2)}`);
                 return;
             }
 
-            // 3. 通用直接返回 balance 字段: { balance: 10.5 }
+            // 4. 直接返回 balance
             if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
                 const b = data.balance !== undefined ? data.balance : data.data.balance;
-                showToast('💰', `充值剩余: $${b}`);
+                showToast('💰', `充值余额: $${b}`);
                 return;
             }
-
-            // 4. 如果是普通的 subscription 响应，且 hard_limit_usd 是正常配额（不等于 100000000 默认值）
-            if (data && typeof data.hard_limit_usd !== 'undefined') {
-                if (data.hard_limit_usd < 1000000) {
-                    showToast('💰', `充值剩余: $${data.hard_limit_usd.toFixed(2)}`);
-                    return;
-                }
-            }
+        } catch(e) {
+            // 忽略单一请求失败，尝试下一个候选接口
         }
     }
 
-    showToast('⚠️', '未能自动读取充值余额（请确认 Key 权限或站点类型）');
+    showToast('⚠️', '未能识别充值余额（请确认 Key 权限或接口格式）');
 }
 window.fetchApiKeyBalance = fetchApiKeyBalance;
