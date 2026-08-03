@@ -746,20 +746,20 @@
                             <input type="text" id="galleryTitleInput" placeholder="例如：买图#1、设子立绘..." class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] font-medium">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">选择图片文件上传 或 粘贴网络图片URL:</label>
+                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">粘贴网络图片URL (本地图片点击右侧选择即可自动存入):</label>
                             <div class="flex items-center gap-2">
                                 <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
-                                <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-semibold transition shrink-0">
-                                    选择本地图片
+                                <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-xs font-bold shadow-sm transition shrink-0">
+                                    <i data-lucide="image-plus" class="w-3 h-3 inline-block mr-1"></i>多选本地图片
                                     <input type="file" id="galleryFileInput" accept="image/*" multiple class="hidden" onchange="handleGalleryFileUpload(event)">
                                 </label>
                             </div>
                         </div>
                     </div>
                     <div class="flex justify-end pt-0.5">
-                        <button onclick="saveGalleryPictureAsset()" class="px-4 py-1.5 rounded-full bg-[#d88c9a] hover:bg-[#c97b8b] text-white text-xs font-bold shadow-sm shadow-[#d88c9a]/30 transition flex items-center gap-1.5">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            <span>存入买图库</span>
+                        <button onclick="saveGalleryPictureAsset()" class="px-4 py-1.5 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-bold transition flex items-center gap-1.5">
+                            <i data-lucide="link" class="w-4 h-4"></i>
+                            <span>仅保存网络链接</span>
                         </button>
                     </div>
                 </div>
