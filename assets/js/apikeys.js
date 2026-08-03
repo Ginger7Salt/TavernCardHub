@@ -369,7 +369,6 @@ async function fetchApiKeyBalance(id) {
     const preset = PROVIDER_PRESETS[item.provider] || PROVIDER_PRESETS.custom;
     const origin = (item.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
     
-    // 如果是语音服务等无通用余额接口的预设
     if (['minimax_tts', 'volcengine_tts', 'aliyun_tts', 'tencent_tts', 'xunfei_tts', 'azure_speech', 'openai_tts'].includes(item.provider)) {
         showToast('ℹ️', '该语音服务通常不提供通用余额查询，请前往对应控制台查看');
         return;
@@ -377,17 +376,14 @@ async function fetchApiKeyBalance(id) {
 
     showToast('⏳', '正在查询余额...');
 
-    // 候选路径列表：自营/中转站/One-API/New-API
-    const candidatePaths = [];
-    if (preset.balancePath) candidatePaths.push(preset.balancePath);
-    
-    // 增加常见中转站路径兜底
-    candidatePaths.push('/v1/dashboard/billing/subscription');
-    candidatePaths.push('/api/user/self');
-    candidatePaths.push('/v1/dashboard/billing/credit_grants');
-    candidatePaths.push('/dashboard/billing/credit_grants');
-    candidatePaths.push('/user/balance');
-    candidatePaths.push('/v1/user/balance');
+    const candidatePaths = [
+        '/api/user/self',
+        '/v1/dashboard/billing/credit_grants',
+        '/v1/dashboard/billing/subscription',
+        '/user/balance',
+        '/v1/user/balance'
+    ];
+    if (preset.balancePath) candidatePaths.unshift(preset.balancePath);
 
     const uniquePaths = [...new Set(candidatePaths)];
 
@@ -395,95 +391,51 @@ async function fetchApiKeyBalance(id) {
         const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
         
         let data = null;
-
-        // 1. 尝试直连
         try {
-            const res = await fetch(fullUrl, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${item.apiKey}`,
-                    'Accept': 'application/json'
-                }
+            let res = await fetch(fullUrl, {
+                headers: { 'Authorization': `Bearer ${item.apiKey}`, 'Accept': 'application/json' }
             });
             if (res.ok) data = await res.json();
-        } catch(e) {
-            // 直连抛出 CORS/网络异常，准备走代理
-        }
-
-        // 2. 如果直连失败/跨域被拦，走隐藏的 CF Worker 代理重试
-        if (!data) {
-            try {
-                const proxyUrl = CF_PROXY_PREFIX + encodeURIComponent(fullUrl);
-                const proxyRes = await fetch(proxyUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${item.apiKey}`,
-                        'Accept': 'application/json'
-                    }
+            else if (typeof CF_PROXY_PREFIX !== 'undefined') {
+                let proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
+                    headers: { 'Authorization': `Bearer ${item.apiKey}`, 'Accept': 'application/json' }
                 });
                 if (proxyRes.ok) data = await proxyRes.json();
-            } catch(e) {
-                // 代理尝试失败，继续尝试下一个路径
             }
-        }
+        } catch(e) {}
 
         if (data) {
-            
-            // 解析常见格式
-            // 1. One-API / New-API: { success: true, data: { quota: 500000, used_quota: 10000 } }
+            // 1. New-API / One-API: { success: true, data: { quota: 5000000, used_quota: 50000 } }
             if (data && data.data && typeof data.data.quota !== 'undefined') {
-                const quota = (data.data.quota / 500000).toFixed(2);
-                showToast('💰', `额度: $${quota}`);
+                const remainQuota = (data.data.quota / 500000).toFixed(2);
+                const usedQuota = typeof data.data.used_quota !== 'undefined' ? (data.data.used_quota / 500000).toFixed(2) : null;
+                showToast('💰', usedQuota !== null ? `充值剩余: $${remainQuota} (已用 $${usedQuota})` : `充值剩余: $${remainQuota}`);
                 return;
             }
-            // 2. OpenAI: { total_available: 12.34 } 或 { total_granted: ... }
+
+            // 2. OpenAI / New-API 节点 Credit Grants: { total_available: 10.00 }
             if (data && typeof data.total_available !== 'undefined') {
-                showToast('💰', `可用余额: $${Number(data.total_available).toFixed(2)}`);
+                showToast('💰', `充值剩余: $${Number(data.total_available).toFixed(2)}`);
                 return;
             }
-            // 2b. New-API / OpenAI 标准 Billing Subscription ({ hard_limit_usd: ... })
-            if (data && typeof data.hard_limit_usd !== 'undefined') {
-                let hardLimit = data.hard_limit_usd;
-                let used = 0;
-                try {
-                    const now = new Date();
-                    const startDate = `${now.getFullYear()}-01-01`;
-                    const endDate = `${now.getFullYear()}-12-31`;
-                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${startDate}&end_date=${endDate}`;
-                    
-                    let usageRes = await fetch(usageUrl, { headers: { 'Authorization': `Bearer ${item.apiKey}` } });
-                    if (!usageRes.ok && typeof CF_PROXY_PREFIX !== 'undefined') {
-                        usageRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(usageUrl), { headers: { 'Authorization': `Bearer ${item.apiKey}` } });
-                    }
-                    if (usageRes.ok) {
-                        const usageData = await usageRes.json();
-                        if (usageData && typeof usageData.total_usage !== 'undefined') {
-                            used = usageData.total_usage / 100;
-                        }
-                    }
-                } catch(e) {}
-                
-                // 直接精确计算展示账户剩余余额
-                const hardLimitUSD = hardLimit / 100; // 美分换算为美元
-                const remain = Math.max(0, hardLimitUSD - used);
-                showToast('💰', `账户余额: $${remain.toFixed(2)} (已用 $${used.toFixed(2)})`);
-                return;
-            }
-            // 3. SiliconFlow / DeepSeek: { data: { balance: "10.00" } } or { balance: 10 }
+
+            // 3. 通用直接返回 balance 字段: { balance: 10.5 }
             if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
                 const b = data.balance !== undefined ? data.balance : data.data.balance;
-                showToast('💰', `余额: ${b}`);
+                showToast('💰', `充值剩余: $${b}`);
                 return;
             }
-            // 4. 通用 quota/balance 字段
-            if (data && typeof data.quota !== 'undefined') {
-                showToast('💰', `额度: ${data.quota}`);
-                return;
+
+            // 4. 如果是普通的 subscription 响应，且 hard_limit_usd 是正常配额（不等于 100000000 默认值）
+            if (data && typeof data.hard_limit_usd !== 'undefined') {
+                if (data.hard_limit_usd < 1000000) {
+                    showToast('💰', `充值剩余: $${data.hard_limit_usd.toFixed(2)}`);
+                    return;
+                }
             }
         }
     }
 
-    showToast('⚠️', '未能自动识别余额接口（可能为渠道专用 Key 或不支持余额查询）');
+    showToast('⚠️', '未能自动读取充值余额（请确认 Key 权限或站点类型）');
 }
-
 window.fetchApiKeyBalance = fetchApiKeyBalance;
