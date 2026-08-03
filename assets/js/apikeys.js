@@ -463,13 +463,10 @@ async function fetchApiKeyBalance(id) {
                     }
                 } catch(e) {}
                 
-                // 如果硬上限为中转站默认占位值（>=1000000），展示已用明细与额度状态
-                if (hardLimit >= 1000000) {
-                    showToast('💰', `已用: $${used.toFixed(2)} / 额度充足`);
-                } else {
-                    const remain = Math.max(0, hardLimit - used);
-                    showToast('💰', `剩余: $${remain.toFixed(2)} (已用 $${used.toFixed(2)})`);
-                }
+                // 直接精确计算展示账户剩余余额
+                const hardLimitUSD = hardLimit / 100; // 美分换算为美元
+                const remain = Math.max(0, hardLimitUSD - used);
+                showToast('💰', `账户余额: $${remain.toFixed(2)} (已用 $${used.toFixed(2)})`);
                 return;
             }
             // 3. SiliconFlow / DeepSeek: { data: { balance: "10.00" } } or { balance: 10 }
