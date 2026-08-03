@@ -706,7 +706,9 @@
                 showToast('❌', '拉取恢复失败，请检查凭证与网络');
             }
             initGithubClient();
-function initSupabaseClient() {
+        }
+
+        function initSupabaseClient() {
             const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || '';
             const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || '';
             document.getElementById('cfgSupabaseUrl').value = customUrl;
