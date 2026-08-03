@@ -89,11 +89,16 @@ function switchTab(tab, e) {
             showToast('🎉', `成功生成包含 ${parsed.length} 个表情的合集 “${packName}”！`);
         }
 
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
+        window.addEventListener('DOMContentLoaded', () => {
+    const fileIn = document.getElementById('fileInput');
+    if (fileIn) {
+        fileIn.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             for (let file of files) await processFile(file);
             updateBadges(); renderItems(); e.target.value = '';
         });
+    }
+});
 
         async function processFile(file) {
             const ext = file.name.split('.').pop().toLowerCase(), id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
