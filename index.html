@@ -597,11 +597,33 @@
             } else if (ext === 'json') {
                 const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
                 let category = 'cards', name = file.name.replace('.json', ''), dataObj = json.data || json;
-                if (json.entries || json.character_book) { category = 'worldbooks'; name = json.name || name; }
-                else if (Array.isArray(json) && json[0]?.scriptName) category = 'regex';
-                else if (dataObj.name) { category = 'cards'; name = dataObj.name; }
-                else if (json.scenario || json.prompt) category = 'scenarios';
-                const asset = { id, category, name, fileType: 'json', cardData: json, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: dataObj.character_book || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
+                
+                // Deep extraction for Worldbook entries
+                let wbObj = null;
+                if (json.entries && (Array.isArray(json.entries) || typeof json.entries === 'object')) {
+                    category = 'worldbooks';
+                    name = json.name || name;
+                    wbObj = json;
+                } else if (json.character_book) {
+                    category = 'worldbooks';
+                    name = json.name || json.character_book.name || name;
+                    wbObj = json.character_book;
+                } else if (Array.isArray(json) && json[0]?.scriptName) {
+                    category = 'regex';
+                } else if (dataObj.name) {
+                    category = 'cards';
+                    name = dataObj.name;
+                    wbObj = dataObj.character_book || null;
+                } else if (json.scenario || json.prompt) {
+                    category = 'scenarios';
+                }
+
+                // If entries is a dictionary/object instead of array (SillyTavern V2 format), normalize to array
+                if (wbObj && wbObj.entries && !Array.isArray(wbObj.entries) && typeof wbObj.entries === 'object') {
+                    wbObj.entries = Object.values(wbObj.entries);
+                }
+
+                const asset = { id, category, name, fileType: 'json', cardData: json, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
                 await saveAsset(asset);
             } else if (ext === 'txt') {
                 const text = await file.text();
@@ -1201,8 +1223,16 @@
 
         function renderWorldbookEntries() {
             const container = document.getElementById('wbEntriesList'); container.innerHTML = '';
-            const wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
-            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            let wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
+            
+            // Normalize entries if stored as Object dictionary
+            let entries = [];
+            if (wb) {
+                if (Array.isArray(wb.entries)) entries = wb.entries;
+                else if (typeof wb.entries === 'object') entries = Object.values(wb.entries);
+                else if (Array.isArray(wb)) entries = wb;
+            }
+
             if (!entries || entries.length === 0) { container.innerHTML = `<div class="py-8 text-center text-[#a38b8d] text-xs">暂无世界书词条</div>`; return; }
             
             // Default select all entries on open
