@@ -225,7 +225,7 @@
             <div class="flex items-center gap-2">
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#b89b9d]"></i>
-                    <input type="text" id="searchInput" oninput="renderItems()" placeholder="全库搜索：名字、标签(Tag)、人设、词条或内容..." class="w-full bg-[#f8eeee]/50 border border-[#f2e3e3] rounded-full pl-9 pr-4 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] transition">
+                    <input type="text" id="searchInput" oninput="onSearchInputDebounced()" placeholder="全库搜索：名字、标签(Tag)、人设、词条或内容..." class="w-full bg-[#f8eeee]/50 border border-[#f2e3e3] rounded-full pl-9 pr-4 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] transition">
                 </div>
                 <span id="itemCountText" class="text-xs text-[#a38b8d] font-medium px-1 shrink-0">共 0 项</span>
             </div>
@@ -741,18 +741,31 @@
             return null;
         }
 
+        let allAssetsCache = null;
+
         function saveAsset(asset) {
             return new Promise((resolve) => {
                 asset.createdAt = asset.createdAt || Date.now();
                 const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
-                tx.oncomplete = () => { resolve(); syncAssetToCloudSilent(asset); };
+                tx.oncomplete = () => { 
+                    allAssetsCache = null; 
+                    resolve(); 
+                    syncAssetToCloudSilent(asset); 
+                };
             });
         }
 
         function getAllAssets() {
             return new Promise((resolve) => {
+                if (allAssetsCache) {
+                    resolve(allAssetsCache);
+                    return;
+                }
                 const tx = db.transaction('assets', 'readonly'), req = tx.objectStore('assets').getAll();
-                req.onsuccess = () => resolve(req.result || []);
+                req.onsuccess = () => {
+                    allAssetsCache = req.result || [];
+                    resolve(allAssetsCache);
+                };
             });
         }
 
@@ -1039,6 +1052,15 @@
             titleInput.value = ''; contentInput.value = '';
             updateBadges(); renderItems();
             showToast('🎉', `已成功保存番外/小剧场 “${title}”！`);
+        }
+
+        let searchDebounceTimer = null;
+
+        function onSearchInputDebounced() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                renderItems();
+            }, 180);
         }
 
         let currentSelectedTagFilter = 'ALL';
