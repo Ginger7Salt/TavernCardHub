@@ -376,8 +376,9 @@ async function fetchApiKeyBalance(id) {
 
     showToast('⏳', '正在查询余额...');
 
-    // 优先尝试 New-API / One-API 专属配额路由，最后尝试 subscription 路由
+    // 针对 New-API / neko-api-key-tool 站点的候选路径，把 /api/usage/token/ 设为最高优先级！
     const candidatePaths = [
+        '/api/usage/token/',
         '/api/user/self',
         '/v1/dashboard/billing/subscription',
         '/v1/dashboard/billing/credit_grants',
@@ -397,24 +398,34 @@ async function fetchApiKeyBalance(id) {
             if (!res.ok) continue;
             const data = await res.json();
 
-            // 1. New-API / One-API 用户配额: { success: true, data: { quota: 5000000, used_quota: 50000 } }
+            // A. neko-api-key-tool / New-API token 专属接口: { data: { unlimited_quota: true/false, total_granted: ..., total_used: ..., total_available: ... } }
+            if (data && data.data && typeof data.data.total_used !== 'undefined') {
+                const d = data.data;
+                const used = (d.total_used / 500000).toFixed(2);
+                if (d.unlimited_quota) {
+                    showToast('💰', `令牌额度: 无限额度 (已用 $${used})`);
+                } else {
+                    const granted = (d.total_granted / 500000).toFixed(2);
+                    const avail = (d.total_available / 500000).toFixed(2);
+                    showToast('💰', `充值剩余: $${avail} / 限额 $${granted} (已用 $${used})`);
+                }
+                return;
+            }
+
+            // B. New-API / One-API 用户配额: { success: true, data: { quota: 5000000, used_quota: 50000 } }
             if (data && data.data && typeof data.data.quota !== 'undefined') {
                 const remainQuota = (data.data.quota / 500000).toFixed(2);
                 showToast('💰', `账户余额: $${remainQuota}`);
                 return;
             }
 
-            // 2. OpenAI / New-API 节点 Subscription: { hard_limit_usd: ... }
+            // C. OpenAI / Subscription
             if (data && typeof data.hard_limit_usd !== 'undefined') {
-                let hardLimitUSD = data.hard_limit_usd / 100; // 美分转美元
+                let hardLimitUSD = data.hard_limit_usd / 100;
                 let usedUSD = 0;
-                
-                // 拉取配套的已用金额 usage
                 try {
                     const now = new Date();
-                    const startDate = `${now.getFullYear()}-01-01`;
-                    const endDate = `${now.getFullYear()}-12-31`;
-                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${startDate}&end_date=${endDate}`;
+                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${now.getFullYear()}-01-01&end_date=${now.getFullYear()}-12-31`;
                     const usageRes = await fetch(usageUrl, { headers: { 'Authorization': 'Bearer ' + item.apiKey } });
                     if (usageRes.ok) {
                         const usageData = await usageRes.json();
@@ -424,10 +435,7 @@ async function fetchApiKeyBalance(id) {
                     }
                 } catch(e) {}
 
-                // 计算真正剩余金额
                 let remainUSD = Math.max(0, hardLimitUSD - usedUSD);
-                
-                // 如果硬上限为 100 万美元这类的虚拟默认值，直接把已算出的消费与基础额度以具体美金数字弹出！
                 if (hardLimitUSD >= 1000000) {
                     showToast('💰', `可用额度: $${remainUSD.toFixed(2)} (已用 $${usedUSD.toFixed(2)})`);
                 } else {
@@ -436,20 +444,13 @@ async function fetchApiKeyBalance(id) {
                 return;
             }
 
-            // 3. 直接返回 total_available: { total_available: 10.00 }
+            // D. total_available
             if (data && typeof data.total_available !== 'undefined') {
                 showToast('💰', `账户余额: $${Number(data.total_available).toFixed(2)}`);
                 return;
             }
-
-            // 4. 直接返回 balance: { balance: 10.5 }
-            if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
-                const b = data.balance !== undefined ? data.balance : data.data.balance;
-                showToast('💰', `账户余额: $${b}`);
-                return;
-            }
         } catch(e) {
-            // 忽略单一请求失败，尝试下一个候选接口
+            // 尝试下一个候选路径
         }
     }
 
