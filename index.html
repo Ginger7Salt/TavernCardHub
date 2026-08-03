@@ -1937,20 +1937,40 @@
             renderItems();
         }
 
+        
         async function handleGalleryFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const titleInput = document.getElementById('galleryTitleInput');
-            if (titleInput && !titleInput.value) {
-                titleInput.value = file.name.replace(/\.[^/.]+$/, '');
+            const files = Array.from(e.target.files || []);
+            if (!files || files.length === 0) return;
+
+            showToast('⌛', `正在批量存入 ${files.length} 张图片...`);
+            let count = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const title = file.name.replace(/\.[^/.]+$/, '');
+                const arrayBuffer = await file.arrayBuffer();
+                const id = 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).substr(2, 9);
+                await saveAsset({ 
+                    id, 
+                    category: 'gallery', 
+                    name: title, 
+                    fileType: file.type || 'image/png', 
+                    rawBuffer: arrayBuffer, 
+                    createdAt: Date.now() + i 
+                });
+                count++;
             }
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                document.getElementById('galleryUrlInput').value = evt.target.result;
-                showToast('🖼️', '图片文件已成功转为本地数据！');
-            };
-            reader.readAsDataURL(file);
+            e.target.value = '';
+            const titleInput = document.getElementById('galleryTitleInput');
+            const urlInput = document.getElementById('galleryUrlInput');
+            if (titleInput) titleInput.value = '';
+            if (urlInput) urlInput.value = '';
+
+            allAssetsCache = null;
+            updateBadges(); 
+            renderItems();
+            showToast('🎉', `已成功存入 ${count} 张二进制原图！`);
         }
+
 
         async function saveGalleryPictureAsset() {
             const titleInput = document.getElementById('galleryTitleInput');
@@ -2104,7 +2124,7 @@
                 card.onclick = () => openDetailView(item);
 
                 if (currentTab === 'gallery') {
-                    const imgUrl = item.rawText || '';
+                    let imgUrl = item.rawText || ''; if (item.rawBuffer) { const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' }); imgUrl = URL.createObjectURL(blob); }
                     card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
                     card.innerHTML = `
                         <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
@@ -2325,7 +2345,7 @@
             if (item.category === 'gallery') {
                 const btnDownloadImg = document.createElement('button');
                 btnDownloadImg.onclick = () => {
-                    const imgUrl = item.rawText || '';
+                    let imgUrl = item.rawText || ''; if (item.rawBuffer) { const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' }); imgUrl = URL.createObjectURL(blob); }
                     if (imgUrl.startsWith('data:image')) {
                         const a = document.createElement('a'); a.href = imgUrl; a.download = `${item.name}.png`; a.click();
                     } else {
