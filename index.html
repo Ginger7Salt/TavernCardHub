@@ -745,14 +745,14 @@
                             <label class="block text-[11px] font-bold text-[#784d52] mb-1">网络图片链接:</label>
                             <div class="flex items-center gap-2">
                                 <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
-                                <button type="button" id="galleryUrlSaveBtn" class="px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] text-xs font-bold shrink-0">保存链接</button>
+                                <button type="button" id="galleryUrlSaveBtn" onclick="saveGalleryUrl()" class="px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] text-xs font-bold shrink-0">保存链接</button>
                             </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 pt-1">
                         <button type="button" id="galleryUploadBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white text-xs font-bold shrink-0">选择本地图片</button>
                         <input type="file" id="galleryFileInput" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="opacity-0 absolute w-px h-px pointer-events-none" style="left:-9999px;">
-                        <button type="button" id="galleryLocalSaveBtn" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white text-xs font-bold shrink-0">保存本地图片</button>
+                        <button type="button" id="galleryLocalSaveBtn" onclick="saveLocalGalleryPictures()" class="px-3 py-1.5 rounded-lg bg-[#d88c9a] text-white text-xs font-bold shrink-0">保存本地图片</button>
                     </div>
                     <div id="galleryPreview" class="hidden grid grid-cols-4 gap-2 pt-1"></div>
                 </div>
@@ -2000,6 +2000,11 @@
         else bindGalleryUploadControls();
 
         async function saveLocalGalleryPictures() {
+            showToast('⌛', '正在写入本地图片...');
+            const inputNow = document.getElementById('galleryFileInput');
+            if (!pendingGalleryFiles.length && inputNow && inputNow.files && inputNow.files.length) {
+                pendingGalleryFiles = Array.from(inputNow.files);
+            }
             const files = pendingGalleryFiles.slice();
             const titleInput = document.getElementById('galleryTitleInput');
             const title = titleInput?.value.trim() || '';
