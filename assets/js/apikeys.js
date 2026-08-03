@@ -382,6 +382,7 @@ async function fetchApiKeyBalance(id) {
     if (preset.balancePath) candidatePaths.push(preset.balancePath);
     
     // 增加常见中转站路径兜底
+    candidatePaths.push('/v1/dashboard/billing/subscription');
     candidatePaths.push('/api/user/self');
     candidatePaths.push('/v1/dashboard/billing/credit_grants');
     candidatePaths.push('/dashboard/billing/credit_grants');
@@ -438,6 +439,37 @@ async function fetchApiKeyBalance(id) {
             // 2. OpenAI: { total_available: 12.34 } 或 { total_granted: ... }
             if (data && typeof data.total_available !== 'undefined') {
                 showToast('💰', `可用余额: $${Number(data.total_available).toFixed(2)}`);
+                return;
+            }
+            // 2b. New-API / OpenAI 标准 Billing Subscription ({ hard_limit_usd: ... })
+            if (data && typeof data.hard_limit_usd !== 'undefined') {
+                let hardLimit = data.hard_limit_usd;
+                let used = 0;
+                try {
+                    const now = new Date();
+                    const startDate = `${now.getFullYear()}-01-01`;
+                    const endDate = `${now.getFullYear()}-12-31`;
+                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${startDate}&end_date=${endDate}`;
+                    
+                    let usageRes = await fetch(usageUrl, { headers: { 'Authorization': `Bearer ${item.apiKey}` } });
+                    if (!usageRes.ok && typeof CF_PROXY_PREFIX !== 'undefined') {
+                        usageRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(usageUrl), { headers: { 'Authorization': `Bearer ${item.apiKey}` } });
+                    }
+                    if (usageRes.ok) {
+                        const usageData = await usageRes.json();
+                        if (usageData && typeof usageData.total_usage !== 'undefined') {
+                            used = usageData.total_usage / 100;
+                        }
+                    }
+                } catch(e) {}
+                
+                // 如果额度数值很大（如 100000000 相当于无限或未设置），提示“无限/正常”；否则计算剩余美元
+                if (hardLimit > 1000000) {
+                    showToast('💰', `额度: 正常可用 (已用 $${used.toFixed(2)})`);
+                } else {
+                    const remain = Math.max(0, hardLimit - used);
+                    showToast('💰', `剩余: $${remain.toFixed(2)} (已用 $${used.toFixed(2)})`);
+                }
                 return;
             }
             // 3. SiliconFlow / DeepSeek: { data: { balance: "10.00" } } or { balance: 10 }
