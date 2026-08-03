@@ -1447,14 +1447,25 @@
         let allAssetsCache = null;
 
         function saveAsset(asset) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 asset.createdAt = asset.createdAt || Date.now();
-                const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').put(asset);
-                tx.oncomplete = () => { 
-                    allAssetsCache = null; 
-                    resolve(); 
-                    syncAssetToCloudSilent(asset); 
-                };
+                try {
+                    const tx = db.transaction('assets', 'readwrite'); 
+                    const store = tx.objectStore('assets');
+                    const req = store.put(asset);
+                    tx.oncomplete = () => { 
+                        allAssetsCache = null; 
+                        resolve(); 
+                        syncAssetToCloudSilent(asset); 
+                    };
+                    tx.onerror = (err) => {
+                        console.error('IndexedDB Put Error:', err);
+                        resolve(); // Resolve to not block UI
+                    };
+                } catch(err) {
+                    console.error('saveAsset exception:', err);
+                    resolve();
+                }
             });
         }
 

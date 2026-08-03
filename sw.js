@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resource-hub-v10000';
+const CACHE_NAME = 'resource-hub-v50000';
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
     e.waitUntil(
