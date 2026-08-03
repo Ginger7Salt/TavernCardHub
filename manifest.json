@@ -1,11 +1,11 @@
 {
-  "name": "酒馆资产工坊",
-  "short_name": "TavernHub",
-  "description": "酒馆角色卡、世界书、表情包与正则规则集中管理工坊",
+  "name": "资源合集",
+  "short_name": "资源合集",
+  "description": "综合角色卡、世界书、表情包与正则规则资源合集",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffef5",
-  "theme_color": "#7c3aed",
+  "background_color": "#faf6f0",
+  "theme_color": "#d88c9a",
   "icons": [
     {
       "src": "/icon-192.png?v=2",
