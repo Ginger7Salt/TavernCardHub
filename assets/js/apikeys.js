@@ -338,9 +338,8 @@ function renderApiKeyList() {
                 <div class="flex items-center gap-1.5 pt-1 overflow-x-auto">
                     <button onclick="copyApiKeyText('${k.apiKey}', 'API Key')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">📋 复制 Key</button>
                     <button onclick="copyApiKeyText('${k.baseUrl}', 'Base URL')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">🔗 复制 URL</button>
-                    <button onclick="copyCurlSnippet('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">💻 复制 curl</button>
-                    <button onclick="fetchApiKeyBalance('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#d88c9a]/10 text-[#d88c9a] text-[11px] font-bold hover:bg-[#d88c9a]/20 transition shrink-0">💰 查余额</button>
-                    <button onclick="testApiKeyConnection('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#d88c9a]/10 text-[#d88c9a] text-[11px] font-bold hover:bg-[#d88c9a]/20 transition shrink-0 ml-auto">⚡ 连通测试</button>
+                    <button onclick="openApiKeyDetailModal('${k.id}')" class="px-3 py-1 rounded-lg bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition shrink-0 shadow-sm">📊 查看详情</button>
+                    <button onclick="testApiKeyConnection('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#d88c9a]/10 text-[#d88c9a] text-[11px] font-bold hover:bg-[#d88c9a]/20 transition shrink-0 ml-auto">⚡ 测试</button>
                 </div>
             </div>
         `;
@@ -475,3 +474,178 @@ async function fetchApiKeyBalance(id) {
     showToast('⚠️', '未能自动识别额度（请确认 Key 格式或中转站设置）');
 }
 window.fetchApiKeyBalance = fetchApiKeyBalance;
+
+// ============================================================
+// API Key 详情弹窗模块 (复刻 check.wuai.pet 令牌信息结构)
+// ============================================================
+
+async function openApiKeyDetailModal(id) {
+    const keys = getStoredApiKeys();
+    const item = keys.find(k => k.id === id);
+    if (!item) return;
+
+    let modal = document.getElementById('apiKeyDetailModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'apiKeyDetailModal';
+        modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+        document.body.appendChild(modal);
+    }
+
+    // 先渲染加载中状态
+    modal.innerHTML = `
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#f2e3e3] space-y-4 animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center justify-between border-b border-[#f7ecee] pb-3">
+                <h3 class="font-bold text-sm text-[#4a3e3d] flex items-center gap-1.5">
+                    <span>🏷️</span> 令牌信息
+                </h3>
+                <button onclick="closeApiKeyDetailModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <div class="py-8 text-center text-[#d88c9a] text-xs font-semibold animate-pulse">
+                ⏳ 正在拉取中转站令牌详细信息...
+            </div>
+        </div>
+    `;
+    modal.classList.remove('hidden');
+
+    const origin = (item.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    const candidatePaths = [
+        '/api/usage/token/',
+        '/api/user/self',
+        '/v1/dashboard/billing/subscription',
+        '/v1/dashboard/billing/credit_grants'
+    ];
+
+    let info = {
+        name: item.name,
+        total: '未知',
+        remain: '未知',
+        used: '未知',
+        expire: '永不过期',
+        isUnlimited: false
+    };
+
+    for (const path of candidatePaths) {
+        const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
+        try {
+            let data = null;
+            let res = await fetch(fullUrl, {
+                headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
+            });
+            if (res.ok) data = await res.json();
+            else if (typeof CF_PROXY_PREFIX !== 'undefined') {
+                let proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
+                    headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
+                });
+                if (proxyRes.ok) data = await proxyRes.json();
+            }
+
+            if (data) {
+                // A. neko-api-key-tool 结构 ({ data: { name, unlimited_quota, total_granted, total_used, total_available, expires_at } })
+                if (data.data && typeof data.data.total_used !== 'undefined') {
+                    const d = data.data;
+                    info.name = d.name || item.name;
+                    const usedUSD = (d.total_used / 500000).toFixed(2);
+                    
+                    if (d.unlimited_quota === true || d.unlimited_quota === 'true') {
+                        info.isUnlimited = true;
+                        info.total = '无限';
+                        info.remain = '无限制';
+                        info.used = '不进行计算';
+                    } else {
+                        info.isUnlimited = false;
+                        const grantedUSD = (d.total_granted / 500000).toFixed(2);
+                        const availUSD = typeof d.total_available !== 'undefined' ? (d.total_available / 500000).toFixed(2) : Math.max(0, grantedUSD - usedUSD).toFixed(2);
+                        info.total = `$${grantedUSD}`;
+                        info.remain = `$${availUSD}`;
+                        info.used = `$${usedUSD}`;
+                    }
+
+                    if (d.expires_at && d.expires_at > 0) {
+                        info.expire = new Date(d.expires_at * 1000).toLocaleDateString();
+                    } else {
+                        info.expire = '永不过期';
+                    }
+                    break;
+                }
+
+                // B. Subscription 结构 ({ hard_limit_usd: ... })
+                if (typeof data.hard_limit_usd !== 'undefined') {
+                    let hardLimitUSD = data.hard_limit_usd / 100;
+                    if (hardLimitUSD >= 1000000) {
+                        info.isUnlimited = true;
+                        info.total = '无限';
+                        info.remain = '无限制';
+                        info.used = '不进行计算';
+                    } else {
+                        info.total = `$${hardLimitUSD.toFixed(2)}`;
+                        info.remain = `$${hardLimitUSD.toFixed(2)}`;
+                        info.used = '$0.00';
+                    }
+                    break;
+                }
+            }
+        } catch(e) {}
+    }
+
+    // 渲染完备的复刻弹窗 UI
+    modal.innerHTML = `
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#f2e3e3] space-y-4 animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center justify-between border-b border-[#f7ecee] pb-3">
+                <h3 class="font-bold text-sm text-[#4a3e3d] flex items-center gap-1.5">
+                    <span>🏷️</span> 令牌信息
+                </h3>
+                <button onclick="copyFormattedTokenDetail('${item.id}')" class="px-2.5 py-1 rounded-full bg-[#f8eeee] text-[#b86b7a] text-[11px] font-bold hover:bg-[#f2dadc] transition flex items-center gap-1">
+                    <i data-lucide="copy" class="w-3 h-3"></i> 复制令牌信息
+                </button>
+                <button onclick="closeApiKeyDetailModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold ml-1">&times;</button>
+            </div>
+
+            <div class="space-y-3 text-xs text-[#5c494a] py-1">
+                <div class="flex items-center justify-between">
+                    <span class="text-[#8c7476] font-medium">令牌名称 <span class="text-[#d88c9a]">🍥</span></span>
+                    <span class="font-bold font-mono text-[#d88c9a]">${info.name}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[#8c7476] font-medium">令牌总额 <span class="text-[#d88c9a]">🍥</span></span>
+                    <span class="font-bold text-[#4a3e3d]">${info.total}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[#8c7476] font-medium">剩余额度 <span class="text-[#d88c9a]">🍥</span></span>
+                    <span class="font-bold text-[#d88c9a]">${info.remain}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[#8c7476] font-medium">已用额度 <span class="text-[#d88c9a]">🍥</span></span>
+                    <span class="font-bold ${info.isUnlimited ? 'text-[#c09a9c]' : 'text-[#4a3e3d]'}">${info.used}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[#8c7476] font-medium">有效期至 <span class="text-[#d88c9a]">🍥</span></span>
+                    <span class="font-bold text-[#d88c9a]">${info.expire}</span>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-[#f7ecee] flex justify-end">
+                <button onclick="closeApiKeyDetailModal()" class="px-5 py-1.5 rounded-full bg-[#d88c9a] text-white text-xs font-bold hover:bg-[#c97b8b] transition shadow-sm">关闭</button>
+            </div>
+        </div>
+    `;
+    if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+
+function closeApiKeyDetailModal() {
+    const modal = document.getElementById('apiKeyDetailModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function copyFormattedTokenDetail(id) {
+    const keys = getStoredApiKeys();
+    const item = keys.find(k => k.id === id);
+    if (!item) return;
+    const infoText = `令牌名称: ${item.name}\nBase URL: ${item.baseUrl}\nAPI Key: ${item.apiKey}`;
+    navigator.clipboard.writeText(infoText);
+    showToast('📋', '已复制令牌详细信息');
+}
+
+window.openApiKeyDetailModal = openApiKeyDetailModal;
+window.closeApiKeyDetailModal = closeApiKeyDetailModal;
+window.copyFormattedTokenDetail = copyFormattedTokenDetail;
