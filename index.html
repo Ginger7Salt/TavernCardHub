@@ -168,6 +168,47 @@
                 </button>
             </div>
 
+            <!-- GitHub Sync Collapsible Section -->
+            <div class="bg-[#f0f4f8] border border-[#d8e4f2] rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <button onclick="toggleGithubConfigCollapse()" class="text-xs font-bold text-[#688ca6] flex items-center gap-1.5">
+                        <i data-lucide="github" class="w-4 h-4 text-[#7a9bb8]"></i>
+                        <span>🐙 GitHub 私有仓库备份</span>
+                        <i data-lucide="chevron-down" id="githubConfigChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                    </button>
+                    <span id="githubStatusBadge" class="text-[9px] px-2 py-0.5 rounded-full bg-[#e8f0f8] text-[#688ca6] font-semibold">未配置</span>
+                </div>
+
+                <div id="githubConfigBody" class="space-y-2.5 pt-1 hidden">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-[#688ca6] mb-0.5">GitHub 用户名 (Username)</label>
+                        <input type="text" id="cfgGithubUser" placeholder="例如：idikale163-source" class="w-full bg-white border border-[#d8e4f2] rounded-lg px-2.5 py-1 text-[11px] font-mono text-[#5c494a] focus:outline-none focus:border-[#7a9bb8]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-[#688ca6] mb-0.5">私有备份仓库名 (Repository)</label>
+                        <input type="text" id="cfgGithubRepo" placeholder="例如：my-resource-hub-backup" class="w-full bg-white border border-[#d8e4f2] rounded-lg px-2.5 py-1 text-[11px] font-mono text-[#5c494a] focus:outline-none focus:border-[#7a9bb8]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-[#688ca6] mb-0.5">Personal Access Token (ghp_...)</label>
+                        <input type="password" id="cfgGithubToken" placeholder="ghp_..." class="w-full bg-white border border-[#d8e4f2] rounded-lg px-2.5 py-1 text-[11px] font-mono text-[#5c494a] focus:outline-none focus:border-[#7a9bb8]">
+                    </div>
+                    <div class="flex items-center justify-between gap-1.5 pt-1">
+                        <button onclick="saveCustomGithubConfig()" class="px-2.5 py-1 rounded-lg bg-[#7a9bb8] text-white text-[10px] font-bold hover:bg-[#688ca6] transition flex-1">保存凭证</button>
+                        <button onclick="backupToGithubRepo()" class="px-2 py-1 rounded-lg bg-[#e8f0f8] text-[#688ca6] text-[10px] font-semibold hover:bg-[#d8e4f2] transition">📤 备份到GitHub</button>
+                        <button onclick="restoreFromGithubRepo()" class="px-2 py-1 rounded-lg bg-[#e8f3ef] text-[#5b8a7f] text-[10px] font-semibold hover:bg-[#d8ebe5] transition">📥 从GitHub恢复</button>
+                    </div>
+
+                    <!-- Github Setup Guide -->
+                    <div class="bg-white/80 border border-[#d8e4f2] rounded-xl p-2.5 space-y-1.5 text-[10px] text-[#688ca6] leading-normal">
+                        <div class="font-bold text-[#4e6b82]">📖 快捷 2 步获取凭证</div>
+                        <div class="flex items-center gap-1.5 pt-0.5">
+                            <a href="https://github.com/new" target="_blank" class="px-2 py-1 rounded bg-[#e8f0f8] text-[#688ca6] hover:underline font-bold text-[10px] flex-1 text-center">1. 建新建私有仓库</a>
+                            <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" class="px-2 py-1 rounded bg-[#e8f0f8] text-[#688ca6] hover:underline font-bold text-[10px] flex-1 text-center">2. 获取 Token (勾选repo)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Cloud Sync Collapsible Section -->
             <div class="bg-[#fdf4f5] border border-[#f5e1e3] rounded-2xl p-3 space-y-2">
                 <div class="flex items-center justify-between">
@@ -189,9 +230,13 @@
                         <input type="password" id="cfgSupabaseKey" placeholder="sb_publishable_... 或 eyJhbGci..." class="w-full bg-white border border-[#f2e3e3] rounded-lg px-2.5 py-1 text-[11px] font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
                     </div>
                     <div class="flex items-center justify-between gap-1.5 pt-1">
-                        <button onclick="saveCustomCloudConfig()" class="px-3 py-1 rounded-lg bg-[#d88c9a] text-white text-[10px] font-bold hover:bg-[#c97b8b] transition flex-1">保存配置</button>
+                        <button onclick="saveCustomCloudConfig()" class="px-2.5 py-1 rounded-lg bg-[#d88c9a] text-white text-[10px] font-bold hover:bg-[#c97b8b] transition flex-1">保存配置</button>
                         <button onclick="manualIncrementalSync()" class="px-2 py-1 rounded-lg bg-[#f8eeee] text-[#b86b7a] text-[10px] font-semibold hover:bg-[#f5e1e3] transition">⚡ 增量同步</button>
                         <button onclick="restoreFromCloudIncremental()" class="px-2 py-1 rounded-lg bg-[#e8f3ef] text-[#5b8a7f] text-[10px] font-semibold hover:bg-[#d8ebe5] transition">🔄 增量恢复</button>
+                    </div>
+                    <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                        <button onclick="forceOverwriteBackupCloud()" class="px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-semibold hover:bg-rose-100 transition flex-1">💥 覆盖云端备份</button>
+                        <button onclick="forceOverwriteRestoreLocal()" class="px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-semibold hover:bg-rose-100 transition flex-1">⚠️ 覆盖恢复本地</button>
                     </div>
 
                     <!-- Setup Guide -->
@@ -522,7 +567,146 @@
             }, duration);
         }
 
-        function initSupabaseClient() {
+        let githubConfigCollapsed = true;
+
+        function toggleGithubConfigCollapse() {
+            githubConfigCollapsed = !githubConfigCollapsed;
+            const body = document.getElementById('githubConfigBody');
+            const chevron = document.getElementById('githubConfigChevron');
+            if (githubConfigCollapsed) { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+            else { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+        }
+
+        function initGithubClient() {
+            const u = localStorage.getItem('TAVERN_GITHUB_USER') || '';
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO') || '';
+            const t = localStorage.getItem('TAVERN_GITHUB_TOKEN') || '';
+            document.getElementById('cfgGithubUser').value = u;
+            document.getElementById('cfgGithubRepo').value = r;
+            document.getElementById('cfgGithubToken').value = t;
+
+            if (u && r && t) {
+                document.getElementById('githubStatusBadge').innerText = '已配置';
+                document.getElementById('githubStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-[#e8f0f8] text-[#688ca6] font-semibold';
+            } else {
+                document.getElementById('githubStatusBadge').innerText = '未配置';
+                document.getElementById('githubStatusBadge').className = 'text-[9px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold';
+            }
+        }
+
+        function saveCustomGithubConfig() {
+            const u = document.getElementById('cfgGithubUser').value.trim();
+            const r = document.getElementById('cfgGithubRepo').value.trim();
+            const t = document.getElementById('cfgGithubToken').value.trim();
+            if (!u || !r || !t) { alert('请填写完整的 GitHub 用户名、仓库名与 Token！'); return; }
+            localStorage.setItem('TAVERN_GITHUB_USER', u);
+            localStorage.setItem('TAVERN_GITHUB_REPO', r);
+            localStorage.setItem('TAVERN_GITHUB_TOKEN', t);
+            initGithubClient();
+            showToast('✅', 'GitHub 私有仓库凭证已保存！');
+        }
+
+        // BACKUP FULL ASSETS TO GITHUB PRIVATE REPO
+        async function backupToGithubRepo() {
+            const u = localStorage.getItem('TAVERN_GITHUB_USER');
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO');
+            const t = localStorage.getItem('TAVERN_GITHUB_TOKEN');
+            if (!u || !r || !t) { alert('未配置 GitHub 凭证，请先在侧边栏填写保存！'); return; }
+
+            document.getElementById('githubStatusBadge').innerText = '备份中...';
+            showToast('📤', '正在打包本地全量资产推送到 GitHub...');
+
+            try {
+                const localAssets = await getAllAssets();
+                const jsonString = JSON.stringify({ version: '2.0', timestamp: Date.now(), total: localAssets.length, assets: localAssets }, null, 2);
+                
+                // UTF-8 base64 encoding
+                const bytes = new TextEncoder().encode(jsonString);
+                let binary = '';
+                for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                const base64Content = btoa(binary);
+
+                const apiUrl = `https://api.github.com/repos/${u}/${r}/contents/backup_resource_hub.json`;
+
+                // Get sha if file exists
+                let sha = null;
+                const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${t}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (getRes.ok) {
+                    const getJson = await getRes.json();
+                    sha = getJson.sha;
+                }
+
+                const putBody = {
+                    message: `Backup ResourceHub Assets - ${new Date().toLocaleString()}`,
+                    content: base64Content
+                };
+                if (sha) putBody.sha = sha;
+
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${t}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify(putBody)
+                });
+
+                if (putRes.ok) {
+                    document.getElementById('githubStatusBadge').innerText = '备份成功';
+                    showToast('🎉', `成功将 ${localAssets.length} 项资产备份覆盖至 GitHub 仓库！`);
+                } else {
+                    const errJson = await putRes.json();
+                    showToast('❌', `推送 GitHub 失败: ${errJson.message}`);
+                }
+            } catch(e) {
+                showToast('❌', '备份失败，请检查网络及 Token 权限');
+            }
+            setTimeout(() => initGithubClient(), 3000);
+        }
+
+        // RESTORE FROM GITHUB PRIVATE REPO
+        async function restoreFromGithubRepo() {
+            const u = localStorage.getItem('TAVERN_GITHUB_USER');
+            const r = localStorage.getItem('TAVERN_GITHUB_REPO');
+            const t = localStorage.getItem('TAVERN_GITHUB_TOKEN');
+            if (!u || !r || !t) { alert('未配置 GitHub 凭证，请先在侧边栏填写保存！'); return; }
+
+            if (!confirm('⚠️ 确定要从 GitHub 私有仓库拉取备份覆盖/合并当前本地资产吗？')) return;
+
+            document.getElementById('githubStatusBadge').innerText = '拉取中...';
+            showToast('📥', '正在从 GitHub 仓库拉取备份数据...');
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${u}/${r}/contents/backup_resource_hub.json`;
+                const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${t}`, 'Accept': 'application/vnd.github.v3+json' } });
+
+                if (!getRes.ok) {
+                    showToast('❌', '拉取失败: 仓库中尚未生成 backup_resource_hub.json 备份文件');
+                    initGithubClient();
+                    return;
+                }
+
+                const getJson = await getRes.json();
+                const binary = atob(getJson.content.replace(/\s/g, ''));
+                const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+                const jsonText = new TextDecoder().decode(bytes);
+                const parsedData = JSON.parse(jsonText);
+
+                if (parsedData && parsedData.assets && Array.isArray(parsedData.assets)) {
+                    let restoredCount = 0;
+                    for (let asset of parsedData.assets) {
+                        const tx = db.transaction('assets', 'readwrite');
+                        tx.objectStore('assets').put(asset);
+                        restoredCount++;
+                    }
+                    allAssetsCache = null;
+                    updateBadges(); renderItems();
+                    showToast('🎉', `成功从 GitHub 拉回恢复 ${restoredCount} 项全量资产！`);
+                } else {
+                    showToast('⚠️', '备份文件格式不兼容');
+                }
+            } catch(e) {
+                showToast('❌', '拉取恢复失败，请检查凭证与网络');
+            }
+            initGithubClient();
+function initSupabaseClient() {
             const customUrl = localStorage.getItem('TAVERN_SUPABASE_URL') || '';
             const customKey = localStorage.getItem('TAVERN_SUPABASE_KEY') || '';
             document.getElementById('cfgSupabaseUrl').value = customUrl;
@@ -583,7 +767,7 @@
                 store.createIndex('category', 'category', { unique: false });
             }
         };
-        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); setupGlobalPasteListener(); };
+        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); initGithubClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); setupGlobalPasteListener(); };
 
         function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
 
@@ -767,6 +951,79 @@
                     resolve(allAssetsCache);
                 };
             });
+        }
+
+        // FORCE OVERWRITE BACKUP TO CLOUD
+        async function forceOverwriteBackupCloud() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法全量覆盖！'); return; }
+            if (!confirm('⚠️ 警告：这会清空 Supabase 云端现有的所有数据，并完全用当前本地 IndexedDB 的数据全量覆盖！确定执行吗？')) return;
+
+            document.getElementById('cloudStatusBadge').innerText = '覆盖清空中...';
+            showToast('💥', '正在清空 Supabase 远程旧数据...');
+
+            try {
+                // Delete all rows
+                const { error: delError } = await supabaseClient.from('tavern_assets').delete().neq('id', '___NON_EXISTENT_ID___');
+                if (delError) { showToast('❌', `清空云端失败: ${delError.message}`); return; }
+
+                const localAssets = await getAllAssets();
+                showToast('📤', `旧数据已清空，正在全量推送 ${localAssets.length} 项本地资产...`);
+
+                let count = 0;
+                for (let asset of localAssets) {
+                    await syncAssetToCloudSilent(asset);
+                    count++;
+                }
+                document.getElementById('cloudStatusBadge').innerText = '已覆盖';
+                showToast('🎉', `强行全量覆盖备份完成！已将 ${count} 项资产覆盖推送到云端！`);
+            } catch(e) {
+                showToast('❌', '覆盖同步失败，请检查网络');
+            }
+            setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
+        }
+
+        // FORCE OVERWRITE RESTORE TO LOCAL
+        async function forceOverwriteRestoreLocal() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复！'); return; }
+            if (!confirm('⚠️ 极度危险：这会彻底清空当前手机本地 IndexedDB 的所有资产，并强制用 Supabase 云端数据覆盖！确定执行吗？')) return;
+
+            document.getElementById('cloudStatusBadge').innerText = '本地清空中...';
+            showToast('⚠️', '正在清空本地数据...');
+
+            try {
+                const tx = db.transaction('assets', 'readwrite');
+                tx.objectStore('assets').clear();
+                allAssetsCache = null;
+
+                tx.oncomplete = async () => {
+                    const { data, error } = await supabaseClient.from('tavern_assets').select('*');
+                    if (error) { showToast('❌', `拉取云端失败: ${error.message}`); return; }
+
+                    if (data && data.length > 0) {
+                        for (let row of data) {
+                            let buffer = null;
+                            if (row.raw_buffer_base64) {
+                                const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                buffer = bytes.buffer;
+                            }
+                            const dataObj = row.card_data?.data || row.card_data || {};
+                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, emojiList: row.card_data?.emojiList || null, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                            
+                            const putTx = db.transaction('assets', 'readwrite');
+                            putTx.objectStore('assets').put(asset);
+                        }
+                        allAssetsCache = null;
+                        updateBadges(); renderItems();
+                        showToast('🎉', `强行全量覆盖恢复完成！已从云端拉回 ${data.length} 项资产覆盖本地！`);
+                    } else {
+                        showToast('ℹ️', '云端无可用备份数据');
+                    }
+                    document.getElementById('cloudStatusBadge').innerText = '已连接';
+                };
+            } catch(e) {
+                showToast('❌', '覆盖恢复失败');
+            }
         }
 
         async function syncAssetToCloudSilent(asset) {
