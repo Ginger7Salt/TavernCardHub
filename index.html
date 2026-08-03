@@ -1969,6 +1969,14 @@
             }
         });
 
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const galleryInput = document.getElementById('galleryFileInput');
+            if (galleryInput) {
+                galleryInput.addEventListener('change', handleGalleryFileUpload);
+            }
+        });
+
         async function handleGalleryFileUpload(e) {
             const files = Array.from(e.target.files || []);
             if (!files || files.length === 0) return;
