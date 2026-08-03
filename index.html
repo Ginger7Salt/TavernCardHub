@@ -1978,6 +1978,7 @@
         });
 
         async function handleGalleryFileUpload(e) {
+            showToast('⌛', '已拦截到图片选择，正在处理...');
             const files = Array.from(e.target.files || []);
             if (!files || files.length === 0) return;
 
