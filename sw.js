@@ -1,8 +1,10 @@
-const CACHE_NAME = 'tavern-card-hub-v1';
+const CACHE_NAME = 'tavern-card-hub-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json?v=2',
+  '/icon-192.png?v=2',
+  '/icon-512.png?v=2'
 ];
 
 self.addEventListener('install', (event) => {
@@ -30,7 +32,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first for API/CDN, fallback to cache for app shell
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
