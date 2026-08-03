@@ -834,7 +834,7 @@
                 </div>
             </div>
 
-            <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+            <div id="itemsContainer" class="grid grid-cols-2 gap-3"></div>
         </div>
 
         <!-- Section 2: Detail View -->
@@ -2033,7 +2033,74 @@
             document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
             if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
 
+            
+            // Category/Folder First View (Except emojis and fonts)
+            if (currentTab !== 'emojis' && currentTab !== 'fonts') {
+                if (!currentFolderOpened && !keyword) {
+                    // Group by subCategory
+                    const folderCounts = {};
+                    folderCounts['未分类'] = 0;
+                    filtered.forEach(a => {
+                        const fName = a.subCategory || '未分类';
+                        folderCounts[fName] = (folderCounts[fName] || 0) + 1;
+                    });
+
+                    // Add Create Folder Card
+                    const addCard = document.createElement('div');
+                    addCard.className = "ui-card p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] border-dashed border-[#f2dadc] bg-[#fdf6f7] transition active:scale-[0.98] min-h-[130px]";
+                    addCard.onclick = () => promptCreateFolder();
+                    addCard.innerHTML = `
+                        <div class="w-9 h-9 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center mb-1.5 shadow-sm">
+                            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-xs text-[#b86b7a] text-center">+ 创建新分类</h3>
+                    `;
+                    container.appendChild(addCard);
+
+                    // Render Folder Cards (竖版, 1排2列)
+                    Object.keys(folderCounts).forEach(fName => {
+                        const cnt = folderCounts[fName];
+                        const fCard = document.createElement('div');
+                        fCard.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] bg-white relative group min-h-[130px]";
+                        fCard.onclick = () => openFolder(fName);
+                        fCard.innerHTML = `
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-8 h-8 rounded-lg bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center">
+                                    <i data-lucide="folder" class="w-4 h-4"></i>
+                                </div>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-xs text-[#4a3e3d] truncate mb-0.5">📂 ${fName}</h3>
+                                <p class="text-[9px] text-[#a38b8d]">点击进入小分类</p>
+                            </div>
+                        `;
+                        container.appendChild(fCard);
+                    });
+                    lucide.createIcons();
+                    return;
+                } else if (currentFolderOpened && !keyword) {
+                    // Filter assets inside this folder
+                    filtered = filtered.filter(a => (a.subCategory || '未分类') === currentFolderOpened);
+
+                    // Breadcrumb Header
+                    const breadcrumb = document.createElement('div');
+                    breadcrumb.className = "col-span-full flex items-center justify-between bg-[#fdf4f5] border border-[#f5e1e3] rounded-xl p-2 mb-1";
+                    breadcrumb.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <button onclick="exitFolderView()" class="px-2.5 py-1 rounded-lg bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition flex items-center gap-1">
+                                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 返回分类列表
+                            </button>
+                            <span class="text-xs font-bold text-[#4a3e3d]">当前分类：📂 ${currentFolderOpened}</span>
+                        </div>
+                        <button onclick="promptBatchMoveToFolder()" class="text-[11px] text-[#b86b7a] hover:underline font-semibold">+ 移动选中到新分类</button>
+                    `;
+                    container.appendChild(breadcrumb);
+                }
+            }
+
             filtered.forEach(item => {
+
                 const card = document.createElement('div');
                 card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group";
                 card.onclick = () => openDetailView(item);
@@ -2839,6 +2906,49 @@
 
     renderList();
     
+
+        let currentFolderOpened = null; // null = Category View, 'string' = Folder Inner View
+
+        function exitFolderView() {
+            currentFolderOpened = null;
+            renderItems();
+        }
+
+        function openFolder(folderName) {
+            currentFolderOpened = folderName;
+            renderItems();
+        }
+
+        function promptCreateFolder() {
+            const folderName = prompt('请输入新小分类名称：');
+            if (folderName && folderName.trim()) {
+                currentFolderOpened = folderName.trim();
+                renderItems();
+                showToast('📂', `已创建并进入小分类 “${currentFolderOpened}”`);
+            }
+        }
+
+        async function promptBatchMoveToFolder() {
+            const folderName = prompt('请输入目标分类名称（输入新名字可直接新建）：');
+            if (!folderName || !folderName.trim()) return;
+            const targetFolder = folderName.trim();
+
+            const assets = await getAllAssets();
+            const curAssets = assets.filter(a => a.category === currentTab);
+            
+            let count = 0;
+            for (let a of curAssets) {
+                if ((a.subCategory || '未分类') === currentFolderOpened) {
+                    a.subCategory = targetFolder;
+                    await saveAsset(a);
+                    count++;
+                }
+            }
+            currentFolderOpened = targetFolder;
+            renderItems();
+            showToast('📁', `已将 ${count} 项资源移入小分类 “${targetFolder}”`);
+        }
+
 </script>
 </body>
 </html>
