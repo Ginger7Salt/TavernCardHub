@@ -5,6 +5,10 @@ function switchTab(tab, e) {
     if (e && e.stopPropagation) e.stopPropagation();
     if (e && e.preventDefault) e.preventDefault();
 
+    // 强行清理并物理移除 Docs 复制抽屉，防止切到 API Key、字体等其他 Tab 时残留
+    const oldDocDrawer = document.getElementById('docDrawerContainer');
+    if (oldDocDrawer) oldDocDrawer.remove();
+
     const apikeysPanel = document.getElementById('apikeysBuilderPanel');
     if (apikeysPanel) apikeysPanel.classList.add('hidden');
 
@@ -915,15 +919,31 @@ if (fileIn) {
                 return nameMatch || tagMatch || textMatch || personalityMatch || wbMatch;
             });
             // document.getElementById('itemCountText').innerText
-            if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
+            // 如果是在子文件夹内部且为空，提示暂无资产
+            if (filtered.length === 0 && (currentFolderOpened || keyword || currentTab === 'emojis' || currentTab === 'fonts')) { 
+                container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; 
+                lucide.createIcons(); 
+                return; 
+            }
 
             
             // Category/Folder First View (Except emojis and fonts)
             if (currentTab !== 'emojis' && currentTab !== 'fonts') {
                 if (!currentFolderOpened && !keyword) {
-                    // Group by subCategory
+                    // Group by subCategory & Include empty custom folders
                     const folderCounts = {};
                     folderCounts['未分类'] = 0;
+                    
+                    // 读取持久化的自定义文件夹列表
+                    let customFolders = [];
+                    try {
+                        const saved = localStorage.getItem('TAVERN_CUSTOM_FOLDERS_' + currentTab);
+                        if (saved) customFolders = JSON.parse(saved);
+                    } catch(e){}
+                    if (Array.isArray(customFolders)) {
+                        customFolders.forEach(f => folderCounts[f] = 0);
+                    }
+
                     filtered.forEach(a => {
                         const fName = a.subCategory || '未分类';
                         folderCounts[fName] = (folderCounts[fName] || 0) + 1;
@@ -1667,7 +1687,7 @@ window.batchMoveSelectedCategory = batchMoveSelectedCategory;
 function renderDocDrawerImportUI() {
     let container = document.getElementById('docDrawerContainer');
     if (currentTab !== 'docs' || !currentFolderOpened) {
-        if (container) container.classList.add('hidden');
+        if (container) container.remove();
         return;
     }
 
