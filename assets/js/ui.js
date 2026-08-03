@@ -1675,26 +1675,27 @@ function renderDocDrawerImportUI() {
         container.id = 'docDrawerContainer';
         container.className = 'my-2 bg-white rounded-2xl border border-[#f2e3e3] p-2.5 shadow-2xs space-y-2';
         
-        const mainEl = document.querySelector('main') || document.body;
         const itemsContainer = document.getElementById('itemsContainer');
         if (itemsContainer && itemsContainer.parentNode) {
             itemsContainer.parentNode.insertBefore(container, itemsContainer);
         } else {
-            mainEl.appendChild(container);
+            document.body.appendChild(container);
         }
     }
+
+    const bodyWasOpen = document.getElementById('docImportDrawerBody') ? !document.getElementById('docImportDrawerBody').classList.contains('hidden') : false;
 
     container.innerHTML = `
         <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1.5">
                 <span>📄</span> 复制文本导入文档
             </span>
-            <button onclick="toggleDocImportDrawer()" class="text-[11px] font-bold text-[#d88c9a] bg-[#f8eeee] px-2.5 py-1 rounded-full hover:bg-[#f2dadc] transition flex items-center gap-1">
+            <button onclick="toggleDocImportDrawer()" class="text-[11px] font-bold text-[#d88c9a] bg-[#f8eeee] px-2.5 py-1 rounded-full hover:bg-[#f2dadc] transition flex items-center gap-1 shadow-xs">
                 <span id="docDrawerToggleIcon">✏️ 新建/粘贴</span>
             </button>
         </div>
 
-        <div id="docImportDrawerBody" class="hidden pt-2 border-t border-[#f7ecee] space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div id="docImportDrawerBody" class="${bodyWasOpen ? '' : 'hidden'} pt-2 border-t border-[#f7ecee] space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <div>
                 <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">文档标题</label>
                 <input id="docImportTitleInput" type="text" placeholder="例: 小说角色大纲 / 章节草稿" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a]">
