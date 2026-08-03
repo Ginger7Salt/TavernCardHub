@@ -376,7 +376,7 @@ async function fetchApiKeyBalance(id) {
 
     showToast('⏳', '正在查询余额...');
 
-    // 针对 New-API / neko-api-key-tool 站点的候选路径，把 /api/usage/token/ 设为最高优先级！
+    // 通用中转站路径探测链（支持 New-API, One-API, Neko-Tool, OpenAI）
     const candidatePaths = [
         '/api/usage/token/',
         '/api/user/self',
@@ -390,85 +390,88 @@ async function fetchApiKeyBalance(id) {
 
     for (const path of uniquePaths) {
         const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
+        
+        let data = null;
         try {
-            let res = null;
-            let data = null;
-            try {
-                res = await fetch(fullUrl, {
+            let res = await fetch(fullUrl, {
+                method: 'GET',
+                headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
+            });
+            if (res.ok) data = await res.json();
+            else if (typeof CF_PROXY_PREFIX !== 'undefined') {
+                let proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
                     method: 'GET',
                     headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
                 });
-                if (res.ok) data = await res.json();
-            } catch(e) {}
-
-            if (!data && typeof CF_PROXY_PREFIX !== 'undefined') {
-                try {
-                    const proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
-                        method: 'GET',
-                        headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
-                    });
-                    if (proxyRes.ok) data = await proxyRes.json();
-                } catch(e) {}
+                if (proxyRes.ok) data = await proxyRes.json();
             }
+        } catch(e) {}
 
-            if (!data) continue;
-
-            // A. neko-api-key-tool / New-API token 专属接口: { data: { unlimited_quota: true/false, total_granted: ..., total_used: ..., total_available: ... } }
+        if (data) {
+            // 通用逻辑分支 1: neko-api-key-tool / New-API 令牌专属结构 ({ data: { name, unlimited_quota, total_granted, total_used, total_available } })
             if (data && data.data && typeof data.data.total_used !== 'undefined') {
                 const d = data.data;
-                const used = (d.total_used / 500000).toFixed(2);
-                if (d.unlimited_quota) {
-                    showToast('💰', `令牌额度: 无限额度 (已用 $${used})`);
+                const tokenName = d.name || '未命名';
+                const usedUSD = (d.total_used / 500000).toFixed(2);
+
+                if (d.unlimited_quota === true || d.unlimited_quota === 'true') {
+                    // 不限额度：不计算剩余额度，仅显示名称与不限额状态
+                    showToast('💰', `[${tokenName}] 状态: 不限额度 (已用 $${usedUSD})`);
                 } else {
-                    const granted = (d.total_granted / 500000).toFixed(2);
-                    const avail = (d.total_available / 500000).toFixed(2);
-                    showToast('💰', `充值剩余: $${avail} / 限额 $${granted} (已用 $${used})`);
+                    // 限额：计算剩余额度
+                    const grantedUSD = (d.total_granted / 500000).toFixed(2);
+                    const availUSD = typeof d.total_available !== 'undefined' ? (d.total_available / 500000).toFixed(2) : Math.max(0, grantedUSD - usedUSD).toFixed(2);
+                    showToast('💰', `[${tokenName}] 剩余额度: $${availUSD} / 限额 $${grantedUSD} (已用 $${usedUSD})`);
                 }
                 return;
             }
 
-            // B. New-API / One-API 用户配额: { success: true, data: { quota: 5000000, used_quota: 50000 } }
+            // 通用逻辑分支 2: One-API / New-API 用户接口 ({ data: { quota, used_quota } })
             if (data && data.data && typeof data.data.quota !== 'undefined') {
                 const remainQuota = (data.data.quota / 500000).toFixed(2);
-                showToast('💰', `账户余额: $${remainQuota}`);
+                showToast('💰', `账户剩余额度: $${remainQuota}`);
                 return;
             }
 
-            // C. OpenAI / Subscription
+            // 通用逻辑分支 3: OpenAI / 兼容 Subscription 路由 ({ hard_limit_usd: ... })
             if (data && typeof data.hard_limit_usd !== 'undefined') {
                 let hardLimitUSD = data.hard_limit_usd / 100;
-                let usedUSD = 0;
-                try {
-                    const now = new Date();
-                    const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${now.getFullYear()}-01-01&end_date=${now.getFullYear()}-12-31`;
-                    const usageRes = await fetch(usageUrl, { headers: { 'Authorization': 'Bearer ' + item.apiKey } });
-                    if (usageRes.ok) {
-                        const usageData = await usageRes.json();
-                        if (usageData && typeof usageData.total_usage !== 'undefined') {
-                            usedUSD = usageData.total_usage / 100;
-                        }
-                    }
-                } catch(e) {}
-
-                let remainUSD = Math.max(0, hardLimitUSD - usedUSD);
+                
+                // 如果硬上限数值超大（如 1,000,000 美金），判定为不限额度，不强制计算差额
                 if (hardLimitUSD >= 1000000) {
-                    showToast('💰', `可用额度: $${remainUSD.toFixed(2)} (已用 $${usedUSD.toFixed(2)})`);
+                    showToast('💰', `状态: 不限额度 / 账户正常`);
                 } else {
-                    showToast('💰', `账户余额: $${remainUSD.toFixed(2)}`);
+                    let usedUSD = 0;
+                    try {
+                        const now = new Date();
+                        const usageUrl = (origin.endsWith('/v1') ? origin : origin + '/v1') + `/dashboard/billing/usage?start_date=${now.getFullYear()}-01-01&end_date=${now.getFullYear()}-12-31`;
+                        const usageRes = await fetch(usageUrl, { headers: { 'Authorization': 'Bearer ' + item.apiKey } });
+                        if (usageRes.ok) {
+                            const usageData = await usageRes.json();
+                            if (usageData && typeof usageData.total_usage !== 'undefined') {
+                                usedUSD = usageData.total_usage / 100;
+                            }
+                        }
+                    } catch(e) {}
+                    let remainUSD = Math.max(0, hardLimitUSD - usedUSD);
+                    showToast('💰', `剩余额度: $${remainUSD.toFixed(2)} / 限额 $${hardLimitUSD.toFixed(2)}`);
                 }
                 return;
             }
 
-            // D. total_available
+            // 通用逻辑分支 4: total_available 或 balance 字段
             if (data && typeof data.total_available !== 'undefined') {
-                showToast('💰', `账户余额: $${Number(data.total_available).toFixed(2)}`);
+                showToast('💰', `剩余额度: $${Number(data.total_available).toFixed(2)}`);
                 return;
             }
-        } catch(e) {
-            // 尝试下一个候选路径
+            if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
+                const b = data.balance !== undefined ? data.balance : data.data.balance;
+                showToast('💰', `剩余额度: $${b}`);
+                return;
+            }
         }
     }
 
-    showToast('⚠️', '未能识别账户余额（请确认 Key 权限或接口格式）');
+    showToast('⚠️', '未能自动识别额度（请确认 Key 格式或中转站设置）');
 }
 window.fetchApiKeyBalance = fetchApiKeyBalance;
