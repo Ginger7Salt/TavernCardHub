@@ -1974,11 +1974,7 @@
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
-            if (currentTab === 'gallery') {
-                container.className = "grid grid-cols-2 gap-3";
-            } else {
-                container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3";
-            }
+            container.className = "grid grid-cols-2 gap-2.5";
 
             renderTagFilterBar();
 
@@ -2139,9 +2135,9 @@
                     let coverHtml = '';
                     if (item.rawBuffer && item.fileType === 'png') {
                         const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
-                        coverHtml = `<div class="h-44 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
+                        coverHtml = `<div class="aspect-square rounded-lg overflow-hidden bg-slate-100 mb-1 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
                     } else {
-                        coverHtml = `<div class="h-28 rounded-xl bg-[#fdf4f5] mb-2 flex items-center justify-center text-[#d88c9a]"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-8 h-8"></i></div>`;
+                        coverHtml = `<div class="h-20 rounded-lg bg-[#fdf4f5] mb-1 flex items-center justify-center text-[#d88c9a]"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-6 h-6"></i></div>`;
                     }
                     card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 3).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}${item.tags.length > 3 ? `<span class="text-[9px] text-[#a38b8d]">+${item.tags.length - 3}</span>` : ''}</div>` : ''}</div>`;
                 }
