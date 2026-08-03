@@ -2520,8 +2520,19 @@
         async function deleteCurrentItem() {
             if (!currentItem) return;
             if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
-                const tx = db.transaction('assets', 'readwrite'); tx.objectStore('assets').delete(currentItem.id);
-                tx.oncomplete = async () => { if (supabaseClient) { try { await supabaseClient.from('tavern_assets').delete().eq('id', currentItem.id); } catch(e){} } closeDetailView(); updateBadges(); renderItems(); showToast('🗑️', '已删除改项资产'); };
+                const idToDelete = currentItem.id;
+                const tx = db.transaction('assets', 'readwrite'); 
+                tx.objectStore('assets').delete(idToDelete);
+                tx.oncomplete = async () => { 
+                    allAssetsCache = null; // Clear memory cache immediately!
+                    if (supabaseClient) { 
+                        try { await supabaseClient.from('tavern_assets').delete().eq('id', idToDelete); } catch(e){} 
+                    } 
+                    closeDetailView(); 
+                    updateBadges(); 
+                    renderItems(); 
+                    showToast('🗑️', '已成功删除资产！'); 
+                };
             }
         }
 
