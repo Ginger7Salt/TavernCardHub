@@ -463,9 +463,9 @@ async function fetchApiKeyBalance(id) {
                     }
                 } catch(e) {}
                 
-                // 如果额度数值很大（如 100000000 相当于无限或未设置），提示“无限/正常”；否则计算剩余美元
-                if (hardLimit > 1000000) {
-                    showToast('💰', `额度: 正常可用 (已用 $${used.toFixed(2)})`);
+                // 如果硬上限为中转站默认占位值（>=1000000），展示已用明细与额度状态
+                if (hardLimit >= 1000000) {
+                    showToast('💰', `已用: $${used.toFixed(2)} / 额度充足`);
                 } else {
                     const remain = Math.max(0, hardLimit - used);
                     showToast('💰', `剩余: $${remain.toFixed(2)} (已用 $${used.toFixed(2)})`);
