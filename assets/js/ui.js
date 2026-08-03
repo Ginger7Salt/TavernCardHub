@@ -961,22 +961,63 @@ if (fileIn) {
                     `;
                     container.appendChild(addCard);
 
-                    // Render Folder Cards (竖版, 1排2列)
+                    // Render Folder Cards (竖版, 1排2列，支持长按整体删除)
                     Object.keys(folderCounts).forEach(fName => {
                         const cnt = folderCounts[fName];
                         const fCard = document.createElement('div');
-                        fCard.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] bg-white relative group min-h-[130px]";
-                        fCard.onclick = () => openFolder(fName);
+                        fCard.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] bg-white relative group min-h-[130px] select-none";
+                        
+                        let folderLongPressTimer = null;
+                        let isFolderLongPress = false;
+
+                        const startFolderPress = (e) => {
+                            isFolderLongPress = false;
+                            folderLongPressTimer = setTimeout(() => {
+                                isFolderLongPress = true;
+                                if (navigator.vibrate) try { navigator.vibrate(50); } catch(err){}
+                                deleteEntireFolder(fName, cnt);
+                            }, 500);
+                        };
+
+                        const cancelFolderPress = () => {
+                            if (folderLongPressTimer) clearTimeout(folderLongPressTimer);
+                        };
+
+                        fCard.addEventListener('touchstart', startFolderPress, { passive: true });
+                        fCard.addEventListener('touchend', cancelFolderPress);
+                        fCard.addEventListener('touchmove', cancelFolderPress);
+                        fCard.addEventListener('mousedown', startFolderPress);
+                        fCard.addEventListener('mouseup', cancelFolderPress);
+                        fCard.addEventListener('mouseleave', cancelFolderPress);
+
+                        fCard.onclick = (e) => {
+                            if (isFolderLongPress) {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                return;
+                            }
+                            openFolder(fName);
+                        };
+
+                        const deleteBtnHtml = fName !== '未分类' 
+                            ? `<button onclick="event.stopPropagation(); deleteEntireFolder('${fName}', ${cnt});" title="删除分类文件夹" class="w-5 h-5 rounded-full bg-[#f8eeee] hover:bg-[#f2dadc] text-[#b86b7a] flex items-center justify-center transition shadow-2xs">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                               </button>` 
+                            : '';
+
                         fCard.innerHTML = `
                             <div class="flex items-center justify-between mb-2">
                                 <div class="w-8 h-8 rounded-lg bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center">
                                     <i data-lucide="folder" class="w-4 h-4"></i>
                                 </div>
-                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
+                                    ${deleteBtnHtml}
+                                </div>
                             </div>
                             <div>
                                 <h3 class="font-bold text-xs text-[#4a3e3d] truncate mb-0.5">📂 ${fName}</h3>
-                                
+                                <p class="text-[9px] text-[#a89294]">长按或点击右上角删除</p>
                             </div>
                         `;
                         container.appendChild(fCard);
@@ -1807,3 +1848,51 @@ window.submitSavePastedDoc = submitSavePastedDoc;
                 });
             } catch(e) { console.error('Sync API keys to cloud failed', e); }
         }
+
+
+// 彻底删除一整个分类文件夹及其下属所有资产
+async function deleteEntireFolder(folderName, itemCount) {
+    if (folderName === '未分类') {
+        showToast('⚠️', '“未分类”为系统默认分类，无法整体删除！');
+        return;
+    }
+    const confirmMsg = itemCount > 0 
+        ? `⚠️ 确定要彻底删除分类文件夹“${folderName}”吗？\n这将同时清空该分类下的 ${itemCount} 项所有资产，且不可恢复！`
+        : `⚠️ 确定要删除空分类文件夹“${folderName}”吗？`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    showToast('🗑️', `正在清理分类“${folderName}”下的所有资产...`);
+    try {
+        // 1. 删除 IndexedDB assets 表中属于该 subCategory 的资产
+        const all = await getAllAssets();
+        const toDelete = all.filter(a => a.category === currentTab && a.subCategory === folderName);
+        for (let item of toDelete) {
+            const tx = db.transaction('assets', 'readwrite');
+            tx.objectStore('assets').delete(item.id);
+            // 如果开启了 Supabase 云端，静默清理云端对应行
+            if (supabaseClient) {
+                try { await supabaseClient.from('tavern_assets').delete().eq('id', item.id); } catch(e){}
+            }
+        }
+
+        // 2. 从本地保存的自定义文件夹列表中移除该文件夹名
+        const key = 'TAVERN_CUSTOM_FOLDERS_' + currentTab;
+        let customFolders = [];
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved) customFolders = JSON.parse(saved);
+        } catch(e){}
+        customFolders = customFolders.filter(f => f !== folderName);
+        localStorage.setItem(key, JSON.stringify(customFolders));
+
+        allAssetsCache = null;
+        if (typeof updateBadges === 'function') updateBadges();
+        await renderItems();
+        showToast('🎉', `分类文件夹“${folderName}”已成功彻底删除！`);
+    } catch(err) {
+        console.error('Delete folder failed', err);
+        showToast('❌', `删除分类失败: ${err.message||err}`);
+    }
+}
+window.deleteEntireFolder = deleteEntireFolder;
