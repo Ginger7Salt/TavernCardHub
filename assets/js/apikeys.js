@@ -339,6 +339,7 @@ function renderApiKeyList() {
                     <button onclick="copyApiKeyText('${k.apiKey}', 'API Key')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">📋 复制 Key</button>
                     <button onclick="copyApiKeyText('${k.baseUrl}', 'Base URL')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">🔗 复制 URL</button>
                     <button onclick="copyCurlSnippet('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#f8eeee] text-[#785e60] text-[11px] font-medium hover:bg-[#f2dadc] transition shrink-0">💻 复制 curl</button>
+                    <button onclick="fetchApiKeyBalance('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#d88c9a]/10 text-[#d88c9a] text-[11px] font-bold hover:bg-[#d88c9a]/20 transition shrink-0">💰 查余额</button>
                     <button onclick="testApiKeyConnection('${k.id}')" class="px-2.5 py-1 rounded-lg bg-[#d88c9a]/10 text-[#d88c9a] text-[11px] font-bold hover:bg-[#d88c9a]/20 transition shrink-0 ml-auto">⚡ 连通测试</button>
                 </div>
             </div>
@@ -359,3 +360,78 @@ window.deleteApiKeyItem = deleteApiKeyItem;
 window.copyApiKeyText = copyApiKeyText;
 window.copyCurlSnippet = copyCurlSnippet;
 window.testApiKeyConnection = testApiKeyConnection;
+
+async function fetchApiKeyBalance(id) {
+    const keys = getStoredApiKeys();
+    const item = keys.find(k => k.id === id);
+    if (!item) return;
+
+    const preset = PROVIDER_PRESETS[item.provider] || PROVIDER_PRESETS.custom;
+    const origin = (item.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    
+    // 如果是语音服务等无通用余额接口的预设
+    if (['minimax_tts', 'volcengine_tts', 'aliyun_tts', 'tencent_tts', 'xunfei_tts', 'azure_speech', 'openai_tts'].includes(item.provider)) {
+        showToast('ℹ️', '该语音服务通常不提供通用余额查询，请前往对应控制台查看');
+        return;
+    }
+
+    showToast('⏳', '正在查询余额...');
+
+    // 候选路径列表：自营/中转站/One-API/New-API
+    const candidatePaths = [];
+    if (preset.balancePath) candidatePaths.push(preset.balancePath);
+    
+    // 增加常见中转站路径兜底
+    candidatePaths.push('/api/user/self');
+    candidatePaths.push('/v1/dashboard/billing/credit_grants');
+    candidatePaths.push('/dashboard/billing/credit_grants');
+    candidatePaths.push('/user/balance');
+    candidatePaths.push('/v1/user/balance');
+
+    const uniquePaths = [...new Set(candidatePaths)];
+
+    for (const path of uniquePaths) {
+        const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
+        try {
+            const res = await fetch(fullUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${item.apiKey}`,
+                    'Accept': 'application/json'
+                }
+            });
+            if (!res.ok) continue;
+            const data = await res.json();
+            
+            // 解析常见格式
+            // 1. One-API / New-API: { success: true, data: { quota: 500000, used_quota: 10000 } }
+            if (data && data.data && typeof data.data.quota !== 'undefined') {
+                const quota = (data.data.quota / 500000).toFixed(2);
+                showToast('💰', `额度: $${quota}`);
+                return;
+            }
+            // 2. OpenAI: { total_available: 12.34 } 或 { total_granted: ... }
+            if (data && typeof data.total_available !== 'undefined') {
+                showToast('💰', `可用余额: $${Number(data.total_available).toFixed(2)}`);
+                return;
+            }
+            // 3. SiliconFlow / DeepSeek: { data: { balance: "10.00" } } or { balance: 10 }
+            if (data && (data.balance !== undefined || (data.data && data.data.balance !== undefined))) {
+                const b = data.balance !== undefined ? data.balance : data.data.balance;
+                showToast('💰', `余额: ${b}`);
+                return;
+            }
+            // 4. 通用 quota/balance 字段
+            if (data && typeof data.quota !== 'undefined') {
+                showToast('💰', `额度: ${data.quota}`);
+                return;
+            }
+        } catch(e) {
+            // 继续下一个候选路径
+        }
+    }
+
+    showToast('⚠️', '未能自动识别余额接口（可能为渠道专用 Key 或不支持余额查询）');
+}
+
+window.fetchApiKeyBalance = fetchApiKeyBalance;
