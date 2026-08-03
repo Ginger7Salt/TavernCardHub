@@ -855,6 +855,7 @@ if (fileIn) {
             } catch (err) { console.error('url gallery save failed', err); showToast('❌', `网络链接保存失败：${err.message||err}`); }
         }
         async function renderItems() {
+    renderDocDrawerImportUI();
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
@@ -1657,3 +1658,112 @@ window.toggleSelectAsset = toggleSelectAsset;
 window.selectAllCurrentAssets = selectAllCurrentAssets;
 window.batchDeleteSelectedAssets = batchDeleteSelectedAssets;
 window.batchMoveSelectedCategory = batchMoveSelectedCategory;
+
+// ============================================================
+// 文本文档 (Docs) 抽屉式复制粘贴导入面板 (仅点进分类后显示)
+// ============================================================
+
+function renderDocDrawerImportUI() {
+    let container = document.getElementById('docDrawerContainer');
+    if (currentTab !== 'docs' || !currentFolderOpened) {
+        if (container) container.classList.add('hidden');
+        return;
+    }
+
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'docDrawerContainer';
+        container.className = 'my-2 bg-white rounded-2xl border border-[#f2e3e3] p-2.5 shadow-2xs space-y-2';
+        
+        const mainEl = document.querySelector('main') || document.body;
+        const itemsContainer = document.getElementById('itemsContainer');
+        if (itemsContainer && itemsContainer.parentNode) {
+            itemsContainer.parentNode.insertBefore(container, itemsContainer);
+        } else {
+            mainEl.appendChild(container);
+        }
+    }
+
+    container.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1.5">
+                <span>📄</span> 复制文本导入文档
+            </span>
+            <button onclick="toggleDocImportDrawer()" class="text-[11px] font-bold text-[#d88c9a] bg-[#f8eeee] px-2.5 py-1 rounded-full hover:bg-[#f2dadc] transition flex items-center gap-1">
+                <span id="docDrawerToggleIcon">✏️ 新建/粘贴</span>
+            </button>
+        </div>
+
+        <div id="docImportDrawerBody" class="hidden pt-2 border-t border-[#f7ecee] space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div>
+                <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">文档标题</label>
+                <input id="docImportTitleInput" type="text" placeholder="例: 小说角色大纲 / 章节草稿" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a]">
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">粘贴文档内容</label>
+                <textarea id="docImportTextContent" placeholder="在此直接粘贴剪贴板复制的长篇文本..." class="w-full h-28 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg p-2.5 text-xs font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+                <button onclick="toggleDocImportDrawer(false)" class="px-3 py-1 rounded-full border border-gray-300 text-gray-600 text-[11px]">取消</button>
+                <button onclick="submitSavePastedDoc()" class="px-4 py-1 rounded-full bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition shadow-sm">保存文档</button>
+            </div>
+        </div>
+    `;
+    container.classList.remove('hidden');
+}
+
+function toggleDocImportDrawer(show = null) {
+    const body = document.getElementById('docImportDrawerBody');
+    if (!body) return;
+    if (show === null) {
+        body.classList.toggle('hidden');
+    } else if (show) {
+        body.classList.remove('hidden');
+    } else {
+        body.classList.add('hidden');
+    }
+}
+
+async function submitSavePastedDoc() {
+    const titleInput = document.getElementById('docImportTitleInput');
+    const contentInput = document.getElementById('docImportTextContent');
+
+    const title = titleInput ? titleInput.value.trim() : '';
+    const content = contentInput ? contentInput.value.trim() : '';
+
+    if (!content) {
+        showToast('⚠️', '请粘贴或输入文档内容！');
+        return;
+    }
+
+    const docName = title || `复制文档_${new Date().toLocaleDateString()}`;
+    const assetId = 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+
+    try {
+        showToast('⌛', '正在保存文档...');
+        await saveAsset({
+            id: assetId,
+            category: 'docs',
+            name: docName.endsWith('.txt') ? docName : `${docName}.txt`,
+            fileType: 'txt',
+            rawText: content,
+            subCategory: currentFolderOpened || '',
+            createdAt: Date.now()
+        });
+
+        if (titleInput) titleInput.value = '';
+        if (contentInput) contentInput.value = '';
+        toggleDocImportDrawer(false);
+
+        allAssetsCache = null;
+        updateBadges();
+        await renderItems();
+        showToast('🎉', `文档 “${docName}” 已成功存入！`);
+    } catch(err) {
+        console.error('Failed to save pasted doc', err);
+        showToast('❌', '保存文档失败');
+    }
+}
+
+window.toggleDocImportDrawer = toggleDocImportDrawer;
+window.submitSavePastedDoc = submitSavePastedDoc;
