@@ -220,13 +220,20 @@
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col overflow-hidden bg-[#faf6f0]">
         
-        <!-- Search Bar -->
-        <div class="p-3 bg-white border-b border-[#f2e3e3] flex items-center gap-2 shrink-0">
-            <div class="relative flex-1">
-                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#b89b9d]"></i>
-                <input type="text" id="searchInput" oninput="renderItems()" placeholder="搜索角色卡、世界书、表情包或文档..." class="w-full bg-[#f8eeee]/50 border border-[#f2e3e3] rounded-full pl-9 pr-4 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] transition">
+        <!-- Search & Tag Filter Area -->
+        <div class="p-3 bg-white border-b border-[#f2e3e3] flex flex-col gap-2 shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#b89b9d]"></i>
+                    <input type="text" id="searchInput" oninput="renderItems()" placeholder="全库搜索：名字、标签(Tag)、人设、词条或内容..." class="w-full bg-[#f8eeee]/50 border border-[#f2e3e3] rounded-full pl-9 pr-4 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] transition">
+                </div>
+                <span id="itemCountText" class="text-xs text-[#a38b8d] font-medium px-1 shrink-0">共 0 项</span>
             </div>
-            <span id="itemCountText" class="text-xs text-[#a38b8d] font-medium px-2">共 0 项</span>
+
+            <!-- Dynamic Tag Pill Filter Bar -->
+            <div id="tagFilterBar" class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5 text-xs">
+                <!-- Tag Pills will be dynamically rendered -->
+            </div>
         </div>
 
         <!-- Section 1: Item Grid/List View -->
@@ -403,6 +410,20 @@
                 </div>
 
                 <div id="subview-overview" class="space-y-4">
+                    <!-- Tags Section -->
+                    <div class="ui-card p-3 space-y-2">
+                        <div class="flex items-center justify-between border-b border-[#f7ecee] pb-1.5">
+                            <span class="text-xs font-bold text-[#b86b7a] uppercase tracking-wider flex items-center gap-1">
+                                <i data-lucide="tag" class="w-3.5 h-3.5 text-[#d88c9a]"></i>
+                                <span>标签分类 (Tags)</span>
+                            </span>
+                            <button onclick="promptAddCustomTag()" class="text-[11px] text-[#d88c9a] hover:underline font-medium">+ 添加标签</button>
+                        </div>
+                        <div id="overviewTagsContainer" class="flex items-center gap-1.5 flex-wrap pt-1">
+                            <!-- Tags pill rendered here -->
+                        </div>
+                    </div>
+
                     <div class="ui-card p-4 space-y-2">
                         <div class="flex items-center justify-between border-b border-[#f7ecee] pb-2">
                             <button onclick="togglePersonalityCollapse()" class="text-xs font-bold text-[#d88c9a] uppercase tracking-wider flex items-center gap-1.5">
@@ -619,13 +640,13 @@
                 const arrayBuffer = await file.arrayBuffer(), jsonText = extractCharaChunk(arrayBuffer);
                 let cardData = {}; if (jsonText) { try { cardData = JSON.parse(jsonText); } catch(err){} }
                 const dataObj = cardData.data || cardData;
-                const asset = { id, category: 'cards', name: dataObj.name || file.name.replace('.png', ''), fileType: 'png', rawBuffer: arrayBuffer, cardData, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(cardData), worldbook: dataObj.character_book || null, regexScripts: dataObj.extensions?.regex_scripts || null, rawText: JSON.stringify(cardData, null, 2), createdAt: Date.now() };
+                const extractedTags = extractTagsFromData(dataObj);
+                const asset = { id, category: 'cards', name: dataObj.name || file.name.replace('.png', ''), fileType: 'png', rawBuffer: arrayBuffer, cardData, tags: extractedTags, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(cardData), worldbook: dataObj.character_book || null, regexScripts: dataObj.extensions?.regex_scripts || null, rawText: JSON.stringify(cardData, null, 2), createdAt: Date.now() };
                 await saveAsset(asset);
             } else if (ext === 'json') {
                 const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
                 let category = 'cards', name = file.name.replace('.json', ''), dataObj = json.data || json;
                 
-                // Deep extraction for Worldbook entries
                 let wbObj = null;
                 if (json.entries && (Array.isArray(json.entries) || typeof json.entries === 'object')) {
                     category = 'worldbooks';
@@ -645,12 +666,12 @@
                     category = 'scenarios';
                 }
 
-                // If entries is a dictionary/object instead of array (SillyTavern V2 format), normalize to array
                 if (wbObj && wbObj.entries && !Array.isArray(wbObj.entries) && typeof wbObj.entries === 'object') {
                     wbObj.entries = Object.values(wbObj.entries);
                 }
 
-                const asset = { id, category, name, fileType: 'json', cardData: json, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
+                const extractedTags = extractTagsFromData(dataObj || json);
+                const asset = { id, category, name, fileType: 'json', cardData: json, tags: extractedTags, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
                 await saveAsset(asset);
             } else if (ext === 'txt') {
                 const text = await file.text();
@@ -1020,9 +1041,109 @@
             showToast('🎉', `已成功保存番外/小剧场 “${title}”！`);
         }
 
-        async function renderItems() {
-            const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase(), container = document.getElementById('itemsContainer');
+        let currentSelectedTagFilter = 'ALL';
+
+        function extractTagsFromData(dataObj) {
+            if (!dataObj) return [];
+            let rawTags = dataObj.tags || dataObj.data?.tags || [];
+            if (typeof rawTags === 'string') {
+                rawTags = rawTags.split(/[,，\s]+/).filter(Boolean);
+            }
+            return Array.isArray(rawTags) ? rawTags.map(t => String(tokTrim(t))).filter(Boolean) : [];
+        }
+
+        function tokTrim(t) { return String(t).trim(); }
+
+        function promptAddCustomTag() {
+            if (!currentItem) return;
+            const newTag = prompt('请输入新标签名字：');
+            if (newTag && newTag.trim()) {
+                const tagStr = newTag.trim();
+                currentItem.tags = currentItem.tags || [];
+                if (!currentItem.tags.includes(tagStr)) {
+                    currentItem.tags.push(tagStr);
+                    saveAsset(currentItem);
+                    renderOverviewTags();
+                    renderTagFilterBar();
+                    showToast('🏷️', `已成功添加标签 “${tagStr}”`);
+                }
+            }
+        }
+
+        function removeTagFromCurrentItem(tag) {
+            if (!currentItem || !currentItem.tags) return;
+            currentItem.tags = currentItem.tags.filter(t => t !== tag);
+            saveAsset(currentItem);
+            renderOverviewTags();
+            renderTagFilterBar();
+            showToast('🗑️', `已移除标签 “${tag}”`);
+        }
+
+        function renderOverviewTags() {
+            const container = document.getElementById('overviewTagsContainer');
+            if (!container) return;
             container.innerHTML = '';
+            const tags = currentItem?.tags || [];
+            if (tags.length === 0) {
+                container.innerHTML = `<span class="text-xs text-[#a38b8d] italic">暂无自定义标签</span>`;
+                return;
+            }
+            tags.forEach(tag => {
+                const pill = document.createElement('span');
+                pill.className = "px-2.5 py-0.5 rounded-full bg-[#f8eeee] border border-[#f2dadc] text-[#b86b7a] text-xs font-semibold flex items-center gap-1";
+                pill.innerHTML = `<span>🏷️ ${tag}</span><button onclick="removeTagFromCurrentItem('${tag}')" class="text-[#a38b8d] hover:text-rose-600 text-[10px] ml-0.5">✕</button>`;
+                container.appendChild(pill);
+            });
+        }
+
+        async function renderTagFilterBar() {
+            const container = document.getElementById('tagFilterBar');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const assets = await getAllAssets();
+            const categoryAssets = assets.filter(a => a.category === currentTab);
+            
+            const tagSet = new Set();
+            categoryAssets.forEach(a => {
+                if (a.tags && Array.isArray(a.tags)) {
+                    a.tags.forEach(t => tagSet.add(t));
+                }
+            });
+
+            if (tagSet.size === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            // "All" Pill
+            const allBtn = document.createElement('button');
+            allBtn.onclick = () => filterByTag('ALL');
+            allBtn.className = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentSelectedTagFilter === 'ALL' ? 'bg-[#d88c9a] text-white shadow-sm' : 'bg-[#f5e8e8] text-[#8c7173] hover:bg-[#f8eeee]'}`;
+            allBtn.innerText = '✨ 全部';
+            container.appendChild(allBtn);
+
+            tagSet.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.onclick = () => filterByTag(tag);
+                btn.className = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentSelectedTagFilter === tag ? 'bg-[#d88c9a] text-white shadow-sm' : 'bg-[#f5e8e8] text-[#8c7173] hover:bg-[#f8eeee]'}`;
+                btn.innerText = `🏷️ ${tag}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function filterByTag(tag) {
+            currentSelectedTagFilter = tag;
+            renderTagFilterBar();
+            renderItems();
+        }
+
+        async function renderItems() {
+            const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+
+            renderTagFilterBar();
 
             const builderPanel = document.getElementById('emojiExportBuilderPanel');
             const extrasPanel = document.getElementById('extrasBuilderPanel');
@@ -1038,7 +1159,32 @@
                 extrasPanel.classList.add('hidden');
             }
 
-            const filtered = assets.filter(a => a.category === currentTab && (a.name.toLowerCase().includes(keyword) || (a.rawText && a.rawText.toLowerCase().includes(keyword))));
+            const filtered = assets.filter(a => {
+                if (a.category !== currentTab) return false;
+
+                // Tag Filter
+                if (currentSelectedTagFilter !== 'ALL') {
+                    if (!a.tags || !a.tags.includes(currentSelectedTagFilter)) return false;
+                }
+
+                // Global Multi-field Search Filter
+                if (!keyword) return true;
+
+                const nameMatch = a.name && a.name.toLowerCase().includes(keyword);
+                const tagMatch = a.tags && a.tags.some(t => t.toLowerCase().includes(keyword));
+                const textMatch = a.rawText && a.rawText.toLowerCase().includes(keyword);
+                const personalityMatch = a.personality && a.personality.toLowerCase().includes(keyword);
+
+                // Deep search in worldbook entries or emojis
+                let wbMatch = false;
+                const wb = a.worldbook || a.cardData?.data?.character_book || a.cardData?.character_book;
+                if (wb && wb.entries) {
+                    const entries = Array.isArray(wb.entries) ? wb.entries : Object.values(wb.entries);
+                    wbMatch = entries.some(e => (e.comment && e.comment.toLowerCase().includes(keyword)) || (e.content && e.content.toLowerCase().includes(keyword)) || (Array.isArray(e.keys) && e.keys.some(k => k.toLowerCase().includes(keyword))));
+                }
+
+                return nameMatch || tagMatch || textMatch || personalityMatch || wbMatch;
+            });
             document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
             if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
 
@@ -1072,7 +1218,7 @@
                     } else {
                         coverHtml = `<div class="h-28 rounded-xl bg-[#fdf4f5] mb-2 flex items-center justify-center text-[#d88c9a]"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-8 h-8"></i></div>`;
                     }
-                    card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3></div>`;
+                    card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 3).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}${item.tags.length > 3 ? `<span class="text-[9px] text-[#a38b8d]">+${item.tags.length - 3}</span>` : ''}</div>` : ''}</div>`;
                 }
                 container.appendChild(card);
             });
@@ -1083,6 +1229,9 @@
             currentItem = item; document.getElementById('pageTitle').innerText = item.name;
             document.getElementById('listView').classList.add('hidden'); document.getElementById('detailView').classList.remove('hidden'); document.getElementById('detailView').classList.add('flex');
             setupHeaderExportActions(item);
+
+            // Render Overview Tags
+            renderOverviewTags();
 
             // Standalone Worldbook Category Handling
             if (item.category === 'worldbooks') {
