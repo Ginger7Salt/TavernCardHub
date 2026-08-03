@@ -1,0 +1,1370 @@
+function switchTab(tab) {
+    currentTab = tab;
+    closeDetailView();
+    toggleSidebar();
+    
+    const fontsPanel = document.getElementById('fontsBuilderPanel');
+    const galleryPanel = document.getElementById('galleryBuilderPanel');
+    const extrasPanel = document.getElementById('extrasBuilderPanel');
+    const emojiPanel = document.getElementById('emojiExportBuilderPanel');
+    const itemsGrid = document.getElementById('itemsContainer');
+    const searchBar = document.getElementById('searchInput')?.parentElement?.parentElement;
+    
+    if (fontsPanel) fontsPanel.classList.add('hidden');
+    if (galleryPanel) galleryPanel.classList.add('hidden');
+    if (extrasPanel) extrasPanel.classList.add('hidden');
+    if (emojiPanel) emojiPanel.classList.add('hidden');
+    if (itemsGrid) itemsGrid.classList.remove('hidden');
+    if (searchBar) searchBar.classList.remove('hidden');
+
+    if (tab === 'fonts') {
+        if (fontsPanel) fontsPanel.classList.remove('hidden');
+        if (itemsGrid) itemsGrid.classList.add('hidden');
+        if (searchBar) searchBar.classList.add('hidden');
+        if (typeof renderList === 'function') renderList();
+    } else if (tab === 'gallery') {
+        if (galleryPanel) galleryPanel.classList.remove('hidden');
+        renderItems();
+    } else if (tab === 'regex') {
+        if (extrasPanel) extrasPanel.classList.remove('hidden');
+        renderItems();
+    } else if (tab === 'emojis') {
+        if (emojiPanel) emojiPanel.classList.remove('hidden');
+        renderItems();
+    } else {
+        renderItems();
+    }
+}
+
+        // Setup Global Paste Listener for Emojis
+        function setupGlobalPasteListener() {
+            window.addEventListener('paste', async (e) => {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+                if (currentTab !== 'emojis') return;
+
+                const text = e.clipboardData.getData('text');
+                if (text && text.trim()) {
+                    const parsed = parseEmojiTextLines(text);
+                    if (parsed.length > 0) {
+                        e.preventDefault();
+                        const packName = '未命名表情合集_' + new Date().toLocaleDateString();
+                        const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: parsed, rawText: text, createdAt: Date.now() });
+                        updateBadges(); renderItems();
+                        showToast('📋', `已快捷将 ${parsed.length} 个表情收纳为总合集 “${packName}”！`);
+                    }
+                }
+            });
+        }
+
+        async function parseAndSavePastedEmojiPack() {
+            const nameInput = document.getElementById('emojiPackNameInput');
+            const textInput = document.getElementById('emojiPasteInput');
+            const packName = nameInput ? nameInput.value.trim() : '';
+            const text = textInput ? textInput.value.trim() : '';
+
+            if (!packName) { showToast('⚠️', '请先填写表情包合集名字！'); return; }
+            if (!text) { showToast('⚠️', '请粘贴包含表情直链的文本！'); return; }
+
+            const parsed = parseEmojiTextLines(text);
+            if (parsed.length === 0) { showToast('⚠️', '未在文本中识别到包含 http/https 的表情链接！'); return; }
+
+            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: parsed, rawText: text, createdAt: Date.now() });
+            
+            nameInput.value = ''; textInput.value = '';
+            updateBadges(); renderItems();
+            showToast('🎉', `成功生成包含 ${parsed.length} 个表情的合集 “${packName}”！`);
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (let file of files) await processFile(file);
+            updateBadges(); renderItems(); e.target.value = '';
+        });
+
+        async function processFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase(), id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            if (ext === 'png') {
+                const arrayBuffer = await file.arrayBuffer(), jsonText = extractCharaChunk(arrayBuffer);
+                let cardData = {}; if (jsonText) { try { cardData = JSON.parse(jsonText); } catch(err){} }
+                const dataObj = cardData.data || cardData;
+                const extractedTags = extractTagsFromData(dataObj);
+                const asset = { id, category: 'cards', name: dataObj.name || file.name.replace('.png', ''), fileType: 'png', rawBuffer: arrayBuffer, cardData, tags: extractedTags, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(cardData), worldbook: dataObj.character_book || null, regexScripts: dataObj.extensions?.regex_scripts || null, rawText: JSON.stringify(cardData, null, 2), createdAt: Date.now() };
+                await saveAsset(asset);
+            } else if (ext === 'json') {
+                const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
+                let category = 'cards', name = file.name.replace('.json', ''), dataObj = json.data || json;
+                
+                let wbObj = null;
+                if (json.entries && (Array.isArray(json.entries) || typeof json.entries === 'object')) {
+                    category = 'worldbooks';
+                    name = json.name || name;
+                    wbObj = json;
+                } else if (json.character_book) {
+                    category = 'worldbooks';
+                    name = json.name || json.character_book.name || name;
+                    wbObj = json.character_book;
+                } else if (Array.isArray(json) && json[0]?.scriptName) {
+                    category = 'regex';
+                } else if (dataObj.name) {
+                    category = 'cards';
+                    name = dataObj.name;
+                    wbObj = dataObj.character_book || null;
+                } else if (json.scenario || json.prompt) {
+                    category = 'scenarios';
+                }
+
+                if (wbObj && wbObj.entries && !Array.isArray(wbObj.entries) && typeof wbObj.entries === 'object') {
+                    wbObj.entries = Object.values(wbObj.entries);
+                }
+
+                const extractedTags = extractTagsFromData(dataObj || json);
+                const asset = { id, category, name, fileType: 'json', cardData: json, tags: extractedTags, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
+                await saveAsset(asset);
+            } else if (ext === 'txt') {
+                const text = await file.text();
+                const emojiParsed = parseEmojiTextLines(text);
+                if (emojiParsed.length > 0 && currentTab === 'emojis') {
+                    const packName = file.name.replace('.txt', '');
+                    await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: emojiParsed, rawText: text, createdAt: Date.now() });
+                } else {
+                    await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
+                }
+            } else if (ext === 'docx') {
+                const arrayBuffer = await file.arrayBuffer(), result = await mammoth.extractRawText({ arrayBuffer });
+                await saveAsset({ id, category: 'docs', name: file.name, fileType: 'docx', rawText: result.value, rawBuffer: arrayBuffer, createdAt: Date.now() });
+            }
+        }
+
+        function parseEmojiTextLines(text) {
+            const lines = text.split(/\r?\n/);
+            const results = [];
+            const urlRegex = /(https?:\/\/[^\s]+)/i;
+            for (let idx = 0; idx < lines.length; idx++) {
+                let line = lines[idx].trim();
+                if (!line) continue;
+                const match = line.match(urlRegex);
+                if (match) {
+                    const url = match[1];
+                    let namePart = line.replace(url, '').replace(/[:：\s,，\--]+$/, '').replace(/^[:：\s,，\--]+/, '').trim();
+                    const code = url.split('/').pop().split('?')[0] || '';
+                    if (!namePart) namePart = code || `表情 #${idx + 1}`;
+                    results.push({ id: 'em_' + idx + '_' + Math.random().toString(36).substr(2, 5), name: namePart, url, code });
+                }
+            }
+            return results;
+        }
+
+        function extractPersonalityDeep(rootObj) {
+            if (!rootObj) return '无人设设定';
+            const d = rootObj.data || rootObj;
+            let candidates = [d.description, d.personality, d.scenario, d.system_prompt, rootObj.description, rootObj.personality].filter(Boolean);
+            if (candidates.length === 0) return '无人设设定';
+            let rawText = candidates[0];
+            if (typeof rawText === 'string' && (rawText.trim().startsWith('{') || rawText.trim().startsWith('"{'))) {
+                try {
+                    let cleanStr = rawText.trim().replace(/^"/, '').replace(/"$/, '').replace(/\\"/g, '"');
+                    let parsed = JSON.parse(cleanStr);
+                    if (parsed.description) rawText = parsed.description;
+                    else if (parsed.personality) rawText = parsed.personality;
+                } catch(e){}
+            }
+            return String(rawText).replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        }
+
+        function extractCharaChunk(arrayBuffer) {
+            const dataView = new DataView(arrayBuffer); let offset = 8;
+            while (offset < dataView.byteLength) {
+                const length = dataView.getUint32(offset), type = String.fromCharCode(dataView.getUint8(offset+4), dataView.getUint8(offset+5), dataView.getUint8(offset+6), dataView.getUint8(offset+7));
+                if (type === 'tEXt') {
+                    const chunkData = new Uint8Array(arrayBuffer, offset + 8, length); let nullIndex = -1;
+                    for (let i = 0; i < chunkData.length; i++) { if (chunkData[i] === 0) { nullIndex = i; break; } }
+                    if (nullIndex !== -1) {
+                        const keyword = new TextDecoder('iso-8859-1').decode(chunkData.subarray(0, nullIndex));
+                        if (keyword === 'chara' || keyword === 'ccv3') { return decodeURIComponent(escape(atob(new TextDecoder('iso-8859-1').decode(chunkData.subarray(nullIndex + 1))))); }
+                    }
+                }
+                offset += 12 + length;
+            }
+            return null;
+        }
+
+        let allAssetsCache = null;
+
+                function getAssetImageUrl(item) {
+            if (!item) return '';
+            if (item.cover instanceof Blob || item.cover instanceof File) {
+                return URL.createObjectURL(item.cover);
+            }
+            if (item.rawBuffer instanceof ArrayBuffer) {
+                const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' });
+                return URL.createObjectURL(blob);
+            }
+            return item.cover || item.rawText || '';
+        }
+
+        function saveAsset(asset) {
+            return new Promise((resolve, reject) => {
+                asset.createdAt = asset.createdAt || Date.now();
+                try {
+                    const tx = db.transaction('assets', 'readwrite'); 
+                    const store = tx.objectStore('assets');
+                    const req = store.put(asset);
+                    tx.oncomplete = () => { 
+                        allAssetsCache = null; 
+                        resolve(); 
+                        syncAssetToCloudSilent(asset); 
+                    };
+                    req.onerror = (err) => {
+                        console.error('IndexedDB Put Error:', err);
+                        reject(req.error || new Error('IndexedDB 写入失败'));
+                    };
+                    tx.onerror = () => {
+                        console.error('IndexedDB transaction error:', tx.error);
+                        reject(tx.error || new Error('IndexedDB 事务失败'));
+                    };
+                } catch(err) {
+                    console.error('saveAsset exception:', err);
+                    reject(err);
+                }
+            });
+        }
+
+        function getAllAssets() {
+            return new Promise((resolve) => {
+                if (allAssetsCache) {
+                    resolve(allAssetsCache);
+                    return;
+                }
+                const tx = db.transaction('assets', 'readonly'), req = tx.objectStore('assets').getAll();
+                req.onsuccess = () => {
+                    allAssetsCache = req.result || [];
+                    resolve(allAssetsCache);
+                };
+            });
+        }
+
+        // FORCE OVERWRITE BACKUP TO CLOUD
+        async function forceOverwriteBackupCloud() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法全量覆盖！'); return; }
+            if (!confirm('⚠️ 警告：这会清空 Supabase 云端现有的所有数据，并完全用当前本地 IndexedDB 的数据全量覆盖！确定执行吗？')) return;
+
+            document.getElementById('cloudStatusBadge').innerText = '覆盖清空中...';
+            showToast('💥', '正在清空 Supabase 远程旧数据...');
+
+            try {
+                // Delete all rows
+                const { error: delError } = await supabaseClient.from('tavern_assets').delete().neq('id', '___NON_EXISTENT_ID___');
+                if (delError) { showToast('❌', `清空云端失败: ${delError.message}`); return; }
+
+                const localAssets = await getAllAssets();
+                showToast('📤', `旧数据已清空，正在全量推送 ${localAssets.length} 项本地资产...`);
+
+                let count = 0;
+                for (let asset of localAssets) {
+                    await syncAssetToCloudSilent(asset);
+                    count++;
+                }
+                document.getElementById('cloudStatusBadge').innerText = '已覆盖';
+                showToast('🎉', `强行全量覆盖备份完成！已将 ${count} 项资产覆盖推送到云端！`);
+            } catch(e) {
+                showToast('❌', '覆盖同步失败，请检查网络');
+            }
+            setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
+        }
+
+        // FORCE OVERWRITE RESTORE TO LOCAL
+        async function forceOverwriteRestoreLocal() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复！'); return; }
+            if (!confirm('⚠️ 极度危险：这会彻底清空当前手机本地 IndexedDB 的所有资产，并强制用 Supabase 云端数据覆盖！确定执行吗？')) return;
+
+            document.getElementById('cloudStatusBadge').innerText = '本地清空中...';
+            showToast('⚠️', '正在清空本地数据...');
+
+            try {
+                const tx = db.transaction('assets', 'readwrite');
+                tx.objectStore('assets').clear();
+                allAssetsCache = null;
+
+                tx.oncomplete = async () => {
+                    const { data, error } = await supabaseClient.from('tavern_assets').select('*');
+                    if (error) { showToast('❌', `拉取云端失败: ${error.message}`); return; }
+
+                    if (data && data.length > 0) {
+                        for (let row of data) {
+                            let buffer = null;
+                            if (row.raw_buffer_base64) {
+                                const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                buffer = bytes.buffer;
+                            }
+                            const dataObj = row.card_data?.data || row.card_data || {};
+                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, emojiList: row.card_data?.emojiList || null, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                            
+                            const putTx = db.transaction('assets', 'readwrite');
+                            putTx.objectStore('assets').put(asset);
+                        }
+                        allAssetsCache = null;
+                        updateBadges(); renderItems();
+                        showToast('🎉', `强行全量覆盖恢复完成！已从云端拉回 ${data.length} 项资产覆盖本地！`);
+                    } else {
+                        showToast('ℹ️', '云端无可用备份数据');
+                    }
+                    document.getElementById('cloudStatusBadge').innerText = '已连接';
+                };
+            } catch(e) {
+                showToast('❌', '覆盖恢复失败');
+            }
+        }
+
+        async function syncAssetToCloudSilent(asset) {
+            if (!supabaseClient) return;
+            try {
+                let base64Buf = null;
+                if (asset.rawBuffer) {
+                    const bytes = new Uint8Array(asset.rawBuffer); let binary = '';
+                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                    base64Buf = btoa(binary);
+                }
+                const { error } = await supabaseClient.from('tavern_assets').upsert({ id: asset.id, category: asset.category, name: asset.name, file_type: asset.fileType, card_data: asset.cardData || { emojiList: asset.emojiList } || null, raw_text: asset.rawText || null, raw_buffer_base64: base64Buf, created_at: asset.createdAt });
+                if (!error) { showToast('⚡', `“${asset.name}”已增量同步至云端`); }
+            } catch(e){}
+        }
+
+        async function manualIncrementalSync() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法同步。请在侧边栏填入 URL 与 Key！'); return; }
+            const localAssets = await getAllAssets();
+            document.getElementById('cloudStatusBadge').innerText = '对比中...';
+            showToast('⚡', '正在对比云端与本地资产差异...');
+
+            try {
+                const { data: cloudMetadata, error } = await supabaseClient.from('tavern_assets').select('id, created_at');
+                if (error) { showToast('❌', `查询云端失败: ${error.message}`); return; }
+
+                const cloudMap = new Map();
+                if (cloudMetadata) cloudMetadata.forEach(row => cloudMap.set(row.id, row.created_at));
+
+                let syncedCount = 0;
+                for (let a of localAssets) {
+                    const cloudTimestamp = cloudMap.get(a.id);
+                    if (!cloudTimestamp || (a.createdAt && a.createdAt > cloudTimestamp)) {
+                        await syncAssetToCloudSilent(a);
+                        syncedCount++;
+                    }
+                }
+
+                document.getElementById('cloudStatusBadge').innerText = '同步完成';
+                showToast('✅', `增量同步完成！本次仅上传了 ${syncedCount} 个变动资产`);
+            } catch(e) { showToast('❌', '增量同步失败，请检查网络'); }
+            setTimeout(() => document.getElementById('cloudStatusBadge').innerText = '已连接', 3000);
+        }
+
+        async function restoreFromCloudIncremental() {
+            if (!supabaseClient) { alert('未配置 Supabase 云端，无法恢复。请在侧边栏填入 URL 与 Key！'); return; }
+            document.getElementById('cloudStatusBadge').innerText = '恢复中...';
+            showToast('🔄', '正在对比拉取云端新增资产...');
+
+            try {
+                const localAssets = await getAllAssets();
+                const localMap = new Map();
+                localAssets.forEach(a => localMap.set(a.id, a.createdAt || 0));
+
+                const { data, error } = await supabaseClient.from('tavern_assets').select('*');
+                if (error) { showToast('❌', `拉取失败: ${error.message}`); return; }
+
+                if (data && data.length > 0) {
+                    let restoredCount = 0;
+                    for (let row of data) {
+                        const localTimestamp = localMap.get(row.id);
+                        const rowTimestamp = row.created_at || 0;
+
+                        if (localTimestamp === undefined || rowTimestamp > localTimestamp) {
+                            let buffer = null;
+                            if (row.raw_buffer_base64) {
+                                const binary = atob(row.raw_buffer_base64), bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                buffer = bytes.buffer;
+                            }
+                            const dataObj = row.card_data?.data || row.card_data || {};
+                            const asset = { id: row.id, category: row.category, name: row.name, fileType: row.file_type, rawBuffer: buffer, cardData: row.card_data, emojiList: row.card_data?.emojiList || null, rawText: row.raw_text, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(row.card_data || {}), worldbook: dataObj.character_book || (row.category === 'worldbooks' ? row.card_data : null), regexScripts: dataObj.extensions?.regex_scripts || (row.category === 'regex' ? row.card_data : null), createdAt: row.created_at || Date.now() };
+                            
+                            const tx = db.transaction('assets', 'readwrite');
+                            tx.objectStore('assets').put(asset);
+                            restoredCount++;
+                        }
+                    }
+                    updateBadges(); renderItems();
+                    showToast('🎉', `增量拉取完毕！仅恢复了 ${restoredCount} 个新增/变动资产！`);
+                } else { showToast('ℹ️', '云端数据库为空'); }
+            } catch(e){ showToast('❌', '恢复失败，请检查 Supabase 配置'); }
+            document.getElementById('cloudStatusBadge').innerText = '已连接';
+        }
+
+        async function autoSyncFromCloudSilent() {
+            if (!supabaseClient) return;
+            try { const localAssets = await getAllAssets(); if (localAssets.length === 0) await restoreFromCloudIncremental(); } catch(e){}
+        }
+
+        async function updateBadges() {
+            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0, gallery: 0 };
+            assets.forEach(a => { if (counts[a.category] !== undefined) counts[a.category]++; });
+            for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
+        }
+
+        // Emoji Builder
+        function appendEmojiVariable(varName) {
+            if (emojiTokens.length > 0 && emojiTokens[emojiTokens.length - 1].type === 'var') {
+                emojiTokens.push({ type: 'sep', value: '：' });
+            }
+            emojiTokens.push({ type: 'var', value: varName });
+            renderEmojiFormatBuilder();
+        }
+
+        function removeEmojiToken(index) {
+            emojiTokens.splice(index, 1);
+            renderEmojiFormatBuilder();
+        }
+
+        function updateEmojiSepValue(index, val) {
+            if (emojiTokens[index]) emojiTokens[index].value = val;
+            renderEmojiFormatPreview();
+        }
+
+        function clearEmojiFormatTokens() {
+            emojiTokens = [];
+            renderEmojiFormatBuilder();
+        }
+
+        function renderEmojiFormatBuilder() {
+            const container = document.getElementById('emojiFormatTokensContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (emojiTokens.length === 0) {
+                container.innerHTML = `<span class="text-xs text-[#a38b8d] italic">请点击上方胶囊按钮点选变量...</span>`;
+                renderEmojiFormatPreview();
+                return;
+            }
+
+            emojiTokens.forEach((tok, idx) => {
+                if (tok.type === 'var') {
+                    const badge = document.createElement('div');
+                    let bg = 'bg-[#d88c9a] text-white';
+                    if (tok.value === '{url}') bg = 'bg-[#7a9bb8] text-white';
+                    if (tok.value === '{code}') bg = 'bg-[#5b8a7f] text-white';
+                    badge.className = `px-2 py-0.5 rounded-lg font-mono text-[11px] font-bold flex items-center gap-1 shadow-sm ${bg}`;
+                    badge.innerHTML = `<span>${tok.value}</span><button onclick="removeEmojiToken(${idx})" class="hover:text-rose-100 text-[10px]">✕</button>`;
+                    container.appendChild(badge);
+                } else if (tok.type === 'sep') {
+                    const sepBox = document.createElement('div');
+                    sepBox.className = "flex items-center gap-1 bg-[#f8eeee] border border-[#f2dadc] rounded-lg px-1.5 py-0.5";
+                    sepBox.innerHTML = `<span class="text-[10px] text-[#8c7173] font-semibold">符号:</span><input type="text" value="${tok.value}" oninput="updateEmojiSepValue(${idx}, this.value)" class="w-8 bg-white border border-[#f2e3e3] rounded px-1 text-center font-mono text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a]"><button onclick="removeEmojiToken(${idx})" class="text-[#a38b8d] hover:text-rose-500 text-[10px] px-0.5">✕</button>`;
+                    container.appendChild(sepBox);
+                }
+            });
+            renderEmojiFormatPreview();
+        }
+
+        function renderEmojiFormatPreview() {
+            const el = document.getElementById('emojiFormatPreviewText');
+            if (!el) return;
+            const sample = { name: '败犬表情', url: 'https://catbox.moe/2a9w.jpg' };
+            let out = '';
+            emojiTokens.forEach(tok => {
+                if (tok.type === 'sep') out += tok.value;
+                else if (tok.value === '{name}') out += sample.name;
+                else if (tok.value === '{url}') out += sample.url;
+            });
+            el.innerText = out || '(无表达)';
+        }
+
+        function formatEmojiSingleItem(item) {
+            let out = '';
+            const url = item.url || '';
+            const name = item.name || '表情';
+
+            emojiTokens.forEach(tok => {
+                if (tok.type === 'sep') out += tok.value;
+                else if (tok.value === '{name}') out += name;
+                else if (tok.value === '{url}') out += url;
+            });
+            return out;
+        }
+
+        // Export Copy, TXT or DOCX for Current Emoji Pack
+        async function exportEmojiPack(formatType) {
+            if (!currentItem || !currentItem.emojiList) return;
+            const list = currentItem.emojiList.filter(em => selectedEmojiPackItems.has(em.id));
+            if (list.length === 0) {
+                showToast('ℹ️', '请先勾选需要导出的表情包！');
+                return;
+            }
+
+            const formattedLines = list.map(em => formatEmojiSingleItem(em));
+            const fullText = formattedLines.join('\n');
+
+            if (formatType === 'copy') {
+                navigator.clipboard.writeText(fullText);
+                showToast('📋', `已快捷复制 ${list.length} 个表情格式文本至剪贴板！`);
+            } else if (formatType === 'txt') {
+                downloadText(fullText, `${currentItem.name}_表情包导出.txt`, 'text/plain');
+                showToast('📄', `已成功导出 ${list.length} 个表情为 TXT 文档！`);
+            } else if (formatType === 'docx') {
+                const docxContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>${currentItem.name}</title></head>
+                    <body>
+                        <h2>${currentItem.name} - 表情包列表</h2>
+                        <hr/>
+                        <pre style="font-family: monospace; font-size: 12px; line-height: 1.6;">${fullText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                    </body>
+                    </html>
+                `;
+                downloadText(docxContent, `${currentItem.name}_表情包导出.docx`, 'application/vnd.ms-word');
+                showToast('📘', `已成功导出 ${list.length} 个表情为 DOCX 文档！`);
+            }
+        }
+
+        function togglePackEmojiSelection(emId) {
+            if (selectedEmojiPackItems.has(emId)) selectedEmojiPackItems.delete(emId);
+            else selectedEmojiPackItems.add(emId);
+        }
+
+        function selectAllPackEmojis(select) {
+            if (!currentItem || !currentItem.emojiList) return;
+            if (select) {
+                currentItem.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
+            } else {
+                selectedEmojiPackItems.clear();
+            }
+            renderEmojiPackGrid();
+        }
+
+        // List View Batch Selection & Deletion for Emoji Packs
+        function toggleEmojiPackInListSelection(id, e) {
+            e.stopPropagation();
+            if (selectedEmojiPackIdsInList.has(id)) selectedEmojiPackIdsInList.delete(id);
+            else selectedEmojiPackIdsInList.add(id);
+        }
+
+        async function selectAllEmojiPacksInList(select) {
+            const assets = await getAllAssets();
+            const filtered = assets.filter(a => a.category === 'emojis');
+            if (select) {
+                filtered.forEach(a => selectedEmojiPackIdsInList.add(a.id));
+            } else {
+                selectedEmojiPackIdsInList.clear();
+            }
+            renderItems();
+        }
+
+        async function batchDeleteSelectedEmojiPacks() {
+            if (selectedEmojiPackIdsInList.size === 0) {
+                showToast('ℹ️', '请先勾选要删除的表情包合集！');
+                return;
+            }
+
+            if (confirm(`确定要一次性删除已勾选的 ${selectedEmojiPackIdsInList.size} 个表情包合集吗？`)) {
+                const idsToDelete = Array.from(selectedEmojiPackIdsInList);
+                const tx = db.transaction('assets', 'readwrite');
+                const store = tx.objectStore('assets');
+                idsToDelete.forEach(id => store.delete(id));
+
+                tx.oncomplete = async () => {
+                    if (supabaseClient) {
+                        try {
+                            for (let id of idsToDelete) {
+                                await supabaseClient.from('tavern_assets').delete().eq('id', id);
+                            }
+                        } catch(e){}
+                    }
+                    selectedEmojiPackIdsInList.clear();
+                    updateBadges(); renderItems();
+                    showToast('🗑️', `成功清理并删除了 ${idsToDelete.length} 个表情包合集！`);
+                };
+            }
+        }
+
+        async function savePastedExtrasAsset() {
+            const titleInput = document.getElementById('extrasTitleInput');
+            const contentInput = document.getElementById('extrasContentInput');
+            const title = titleInput ? titleInput.value.trim() : '';
+            const content = contentInput ? contentInput.value.trim() : '';
+
+            if (!title) { showToast('⚠️', '请先输入番外/小剧场名字！'); return; }
+            if (!content) { showToast('⚠️', '请先输入番外/小剧场内容！'); return; }
+
+            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await saveAsset({ id, category: 'regex', name: title, fileType: 'txt', rawText: content, createdAt: Date.now() });
+
+            titleInput.value = ''; contentInput.value = '';
+            updateBadges(); renderItems();
+            showToast('🎉', `已成功保存番外/小剧场 “${title}”！`);
+        }
+
+        let searchDebounceTimer = null;
+
+        function onSearchInputDebounced() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                renderItems();
+            }, 180);
+        }
+
+        let currentSelectedTagFilter = 'ALL';
+
+        function extractTagsFromData(dataObj) {
+            if (!dataObj) return [];
+            let rawTags = dataObj.tags || dataObj.data?.tags || [];
+            if (typeof rawTags === 'string') {
+                rawTags = rawTags.split(/[,，\s]+/).filter(Boolean);
+            }
+            return Array.isArray(rawTags) ? rawTags.map(t => String(tokTrim(t))).filter(Boolean) : [];
+        }
+
+        function tokTrim(t) { return String(t).trim(); }
+
+        function promptAddCustomTag() {
+            if (!currentItem) return;
+            const newTag = prompt('请输入新标签名字：');
+            if (newTag && newTag.trim()) {
+                const tagStr = newTag.trim();
+                currentItem.tags = currentItem.tags || [];
+                if (!currentItem.tags.includes(tagStr)) {
+                    currentItem.tags.push(tagStr);
+                    saveAsset(currentItem);
+                    renderOverviewTags();
+                    renderTagFilterBar();
+                    showToast('🏷️', `已成功添加标签 “${tagStr}”`);
+                }
+            }
+        }
+
+        function removeTagFromCurrentItem(tag) {
+            if (!currentItem || !currentItem.tags) return;
+            currentItem.tags = currentItem.tags.filter(t => t !== tag);
+            saveAsset(currentItem);
+            renderOverviewTags();
+            renderTagFilterBar();
+            showToast('🗑️', `已移除标签 “${tag}”`);
+        }
+
+        function renderOverviewTags() {
+            const container = document.getElementById('overviewTagsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            const tags = currentItem?.tags || [];
+            if (tags.length === 0) {
+                container.innerHTML = `<span class="text-xs text-[#a38b8d] italic">暂无自定义标签</span>`;
+                return;
+            }
+            tags.forEach(tag => {
+                const pill = document.createElement('span');
+                pill.className = "px-2.5 py-0.5 rounded-full bg-[#f8eeee] border border-[#f2dadc] text-[#b86b7a] text-xs font-semibold flex items-center gap-1";
+                pill.innerHTML = `<span>🏷️ ${tag}</span><button onclick="removeTagFromCurrentItem('${tag}')" class="text-[#a38b8d] hover:text-rose-600 text-[10px] ml-0.5">✕</button>`;
+                container.appendChild(pill);
+            });
+        }
+
+        async function renderTagFilterBar() {
+            const container = document.getElementById('tagFilterBar');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const assets = await getAllAssets();
+            const categoryAssets = assets.filter(a => a.category === currentTab);
+            
+            const tagSet = new Set();
+            categoryAssets.forEach(a => {
+                if (a.tags && Array.isArray(a.tags)) {
+                    a.tags.forEach(t => tagSet.add(t));
+                }
+            });
+
+            if (tagSet.size === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            // "All" Pill
+            const allBtn = document.createElement('button');
+            allBtn.onclick = () => filterByTag('ALL');
+            allBtn.className = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentSelectedTagFilter === 'ALL' ? 'bg-[#d88c9a] text-white shadow-sm' : 'bg-[#f5e8e8] text-[#8c7173] hover:bg-[#f8eeee]'}`;
+            allBtn.innerText = '✨ 全部';
+            container.appendChild(allBtn);
+
+            tagSet.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.onclick = () => filterByTag(tag);
+                btn.className = `px-3 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentSelectedTagFilter === tag ? 'bg-[#d88c9a] text-white shadow-sm' : 'bg-[#f5e8e8] text-[#8c7173] hover:bg-[#f8eeee]'}`;
+                btn.innerText = `🏷️ ${tag}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function filterByTag(tag) {
+            currentSelectedTagFilter = tag;
+            renderTagFilterBar();
+            renderItems();
+        }
+        let pendingGalleryFiles = [];
+        let pendingGalleryPreviewUrls = [];
+
+        function clearGalleryPreview() {
+            pendingGalleryPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+            pendingGalleryPreviewUrls = [];
+            const box = document.getElementById('galleryPreview');
+            if (box) { box.innerHTML = ''; box.classList.add('hidden'); }
+        }
+
+        function renderGalleryPreview() {
+            const box = document.getElementById('galleryPreview');
+            if (!box) return;
+            clearGalleryPreview();
+            if (!pendingGalleryFiles.length) return;
+            box.classList.remove('hidden');
+            pendingGalleryFiles.forEach(file => {
+                const url = URL.createObjectURL(file);
+                pendingGalleryPreviewUrls.push(url);
+                const item = document.createElement('div');
+                item.className = 'aspect-square rounded-lg overflow-hidden border border-[#f2e3e3] bg-[#fdf4f5]';
+                item.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                box.appendChild(item);
+            });
+        }
+
+        function bindGalleryUploadControls() {
+            const input = document.getElementById('galleryFileInput');
+            const chooseBtn = document.getElementById('galleryUploadBtn');
+            if (!input || input.dataset.bound === '1') return;
+            input.dataset.bound = '1';
+            chooseBtn?.addEventListener('click', ev => { ev.preventDefault(); input.click(); });
+            input.addEventListener('change', ev => {
+                pendingGalleryFiles = Array.from(ev.target.files || []);
+                renderGalleryPreview();
+                if (pendingGalleryFiles.length) showToast('📎', `已选择 ${pendingGalleryFiles.length} 张图片，请确认预览后保存`);
+            });
+            document.getElementById('galleryLocalSaveBtn')?.addEventListener('click', saveLocalGalleryPictures);
+            document.getElementById('galleryUrlSaveBtn')?.addEventListener('click', saveGalleryUrl);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, {once:true});
+        else bindGalleryUploadControls();
+
+        async function saveLocalGalleryPictures() {
+            showToast('⌛', '正在写入本地图片...');
+            const inputNow = document.getElementById('galleryFileInput');
+            if (!pendingGalleryFiles.length && inputNow && inputNow.files && inputNow.files.length) {
+                pendingGalleryFiles = Array.from(inputNow.files);
+            }
+            const files = pendingGalleryFiles.slice();
+            const titleInput = document.getElementById('galleryTitleInput');
+            const title = titleInput?.value.trim() || '';
+            if (!files.length) { showToast('⚠️', '请先选择本地图片'); return; }
+            try {
+                showToast('⌛', `正在保存 ${files.length} 张本地图片...`);
+                for (let i=0; i<files.length; i++) {
+                    const file = files[i];
+                    const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()+i}`;
+                    await saveAsset({ id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:title||name, fileType:file.type||'image/png', cover:new Blob([file], {type:file.type||'image/png'}), subCategory:currentFolderOpened||'', createdAt:Date.now()+i });
+                }
+                pendingGalleryFiles=[];
+                clearGalleryPreview();
+                const input=document.getElementById('galleryFileInput');
+                if (input) input.value='';
+                if (titleInput) titleInput.value='';
+                allAssetsCache=null; updateBadges(); await renderItems();
+                showToast('🎉', `已保存 ${files.length} 张本地图片`);
+            } catch (err) { console.error('local gallery save failed', err); showToast('❌', `本地图片保存失败：${err.message||err}`); }
+        }
+
+        async function saveGalleryUrl() {
+            const urlInput=document.getElementById('galleryUrlInput');
+            const titleInput=document.getElementById('galleryTitleInput');
+            const url=urlInput?.value.trim()||'';
+            if (!/^https?:\/\//i.test(url)) { showToast('⚠️','请填写有效的图片链接'); return; }
+            try {
+                await saveAsset({id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:titleInput?.value.trim()||'网络图片', fileType:'img', rawText:url, subCategory:currentFolderOpened||'', createdAt:Date.now()});
+                if (urlInput) urlInput.value=''; if (titleInput) titleInput.value='';
+                allAssetsCache=null; updateBadges(); await renderItems(); showToast('🎉','网络图片链接已保存');
+            } catch (err) { console.error('url gallery save failed', err); showToast('❌', `网络链接保存失败：${err.message||err}`); }
+        }
+        async function renderItems() {
+            const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+
+            container.className = "grid grid-cols-2 gap-2.5";
+
+            renderTagFilterBar();
+
+            const builderPanel = document.getElementById('emojiExportBuilderPanel');
+            const extrasPanel = document.getElementById('extrasBuilderPanel');
+            const galleryPanel = document.getElementById('galleryBuilderPanel');
+            
+            if (currentTab === 'emojis') { 
+                builderPanel.classList.remove('hidden'); 
+                extrasPanel.classList.add('hidden');
+                galleryPanel.classList.add('hidden');
+            } else if (currentTab === 'regex') {
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.remove('hidden');
+                galleryPanel.classList.add('hidden');
+            } else if (currentTab === 'gallery') {
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.add('hidden');
+                galleryPanel.classList.remove('hidden');
+            } else { 
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.add('hidden');
+                galleryPanel.classList.add('hidden');
+            }
+
+            const filtered = assets.filter(a => {
+                if (a.category !== currentTab) return false;
+
+                // Tag Filter
+                if (currentSelectedTagFilter !== 'ALL') {
+                    if (!a.tags || !a.tags.includes(currentSelectedTagFilter)) return false;
+                }
+
+                // Global Multi-field Search Filter
+                if (!keyword) return true;
+
+                const nameMatch = a.name && a.name.toLowerCase().includes(keyword);
+                const tagMatch = a.tags && a.tags.some(t => t.toLowerCase().includes(keyword));
+                const textMatch = a.rawText && a.rawText.toLowerCase().includes(keyword);
+                const personalityMatch = a.personality && a.personality.toLowerCase().includes(keyword);
+
+                // Deep search in worldbook entries or emojis
+                let wbMatch = false;
+                const wb = a.worldbook || a.cardData?.data?.character_book || a.cardData?.character_book;
+                if (wb && wb.entries) {
+                    const entries = Array.isArray(wb.entries) ? wb.entries : Object.values(wb.entries);
+                    wbMatch = entries.some(e => (e.comment && e.comment.toLowerCase().includes(keyword)) || (e.content && e.content.toLowerCase().includes(keyword)) || (Array.isArray(e.keys) && e.keys.some(k => k.toLowerCase().includes(keyword))));
+                }
+
+                return nameMatch || tagMatch || textMatch || personalityMatch || wbMatch;
+            });
+            // document.getElementById('itemCountText').innerText
+            if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
+
+            
+            // Category/Folder First View (Except emojis and fonts)
+            if (currentTab !== 'emojis' && currentTab !== 'fonts') {
+                if (!currentFolderOpened && !keyword) {
+                    // Group by subCategory
+                    const folderCounts = {};
+                    folderCounts['未分类'] = 0;
+                    filtered.forEach(a => {
+                        const fName = a.subCategory || '未分类';
+                        folderCounts[fName] = (folderCounts[fName] || 0) + 1;
+                    });
+
+                    // Add Create Folder Card
+                    const addCard = document.createElement('div');
+                    addCard.className = "ui-card p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] border-dashed border-[#f2dadc] bg-[#fdf6f7] transition active:scale-[0.98] min-h-[130px]";
+                    addCard.onclick = () => promptCreateFolder();
+                    addCard.innerHTML = `
+                        <div class="w-9 h-9 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center mb-1.5 shadow-sm">
+                            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-xs text-[#b86b7a] text-center">+ 创建新分类</h3>
+                    `;
+                    container.appendChild(addCard);
+
+                    // Render Folder Cards (竖版, 1排2列)
+                    Object.keys(folderCounts).forEach(fName => {
+                        const cnt = folderCounts[fName];
+                        const fCard = document.createElement('div');
+                        fCard.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] bg-white relative group min-h-[130px]";
+                        fCard.onclick = () => openFolder(fName);
+                        fCard.innerHTML = `
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-8 h-8 rounded-lg bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center">
+                                    <i data-lucide="folder" class="w-4 h-4"></i>
+                                </div>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-xs text-[#4a3e3d] truncate mb-0.5">📂 ${fName}</h3>
+                                
+                            </div>
+                        `;
+                        container.appendChild(fCard);
+                    });
+                    lucide.createIcons();
+                    return;
+                } else if (currentFolderOpened && !keyword) {
+                    // Filter assets inside this folder
+                    const folderItems = filtered.filter(a => (a.subCategory || '未分类') === currentFolderOpened || (currentFolderOpened === '未分类' && (!a.subCategory || a.subCategory === '')));
+                    filtered.length = 0;
+                    folderItems.forEach(fi => filtered.push(fi));
+
+                    // Breadcrumb Header
+                    const breadcrumb = document.createElement('div');
+                    breadcrumb.className = "col-span-full flex items-center justify-between bg-[#fdf4f5] border border-[#f5e1e3] rounded-xl p-2 mb-1";
+                    breadcrumb.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <button onclick="exitFolderView()" class="px-2.5 py-1 rounded-lg bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition flex items-center gap-1">
+                                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 返回分类列表
+                            </button>
+                            <span class="text-xs font-bold text-[#4a3e3d]">当前分类：📂 ${currentFolderOpened}</span>
+                        </div>
+                        <button onclick="promptBatchMoveToFolder()" class="text-[11px] text-[#b86b7a] hover:underline font-semibold">+ 移动选中到新分类</button>
+                    `;
+                    container.appendChild(breadcrumb);
+                }
+            }
+
+            filtered.forEach(item => {
+
+                const card = document.createElement('div');
+                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group";
+                card.onclick = () => openDetailView(item);
+
+                if (currentTab === 'gallery') {
+                    const imgUrl = getAssetImageUrl(item);
+                    card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
+                    card.innerHTML = `
+                        <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
+                            <img src="${imgUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.src='https://placehold.co/300x400/fdf4f5/d88c9a?text=图片加载失败'">
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-xs text-[#4a3e3d] text-center truncate px-0.5">${item.name}</h3>
+                        </div>
+                    `;
+                } else if (currentTab === 'emojis') {
+                    const count = item.emojiList ? item.emojiList.length : 0;
+                    const previewCover = item.emojiList && item.emojiList[0] ? item.emojiList[0].url : '';
+                    const isChecked = selectedEmojiPackIdsInList.has(item.id);
+
+                    card.innerHTML = `
+                        <div class="absolute top-2 left-2 z-10">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="toggleEmojiPackInListSelection('${item.id}', event)" class="w-4 h-4 text-[#d88c9a] rounded border-[#f2e3e3] cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="h-28 rounded-xl bg-[#fdf4f5] mb-2 border border-[#f5e1e3] flex items-center justify-center overflow-hidden p-1">
+                                ${previewCover ? `<img src="${previewCover}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/150x150/fdf4f5/d88c9a?text=表情合集'">` : `<i data-lucide="smile" class="w-8 h-8 text-[#d88c9a]"></i>`}
+                            </div>
+                            <h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-0.5">${item.name}</h3>
+                            <p class="text-[10px] text-[#b86b7a] font-semibold text-center">包含 ${count} 个表情图片</p>
+                        </div>
+                    `;
+                } else {
+                    let coverHtml = '';
+                    if (item.rawBuffer && item.fileType === 'png') {
+                        const blob = new Blob([item.rawBuffer], { type: 'image/png' }), url = URL.createObjectURL(blob);
+                        coverHtml = `<div class="aspect-square rounded-lg overflow-hidden bg-slate-100 mb-1 border border-slate-100"><img src="${url}" class="w-full h-full object-cover"></div>`;
+                    } else {
+                        coverHtml = `<div class="h-20 rounded-lg bg-[#fdf4f5] mb-1 flex items-center justify-center text-[#d88c9a]"><i data-lucide="${item.fileType === 'docx' || item.fileType === 'txt' ? 'file-text' : 'user'}" class="w-6 h-6"></i></div>`;
+                    }
+                    card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 3).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}${item.tags.length > 3 ? `<span class="text-[9px] text-[#a38b8d]">+${item.tags.length - 3}</span>` : ''}</div>` : ''}</div>`;
+                }
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        
+        async function renameCurrentItem() {
+            if (!currentItem) return;
+            const newName = prompt('请输入新名称：', currentItem.name);
+            if (newName && newName.trim() && newName.trim() !== currentItem.name) {
+                currentItem.name = newName.trim();
+                await saveAsset(currentItem);
+                document.getElementById('pageTitle').innerText = currentItem.name;
+                updateBadges();
+                renderItems();
+                showToast('✏️', `已重命名为 “${currentItem.name}”`);
+            }
+        }
+
+        function openDetailView(item) {
+            currentItem = item; document.getElementById('pageTitle').innerText = item.name;
+            document.getElementById('listView').classList.add('hidden'); document.getElementById('detailView').classList.remove('hidden'); document.getElementById('detailView').classList.add('flex');
+            setupHeaderExportActions(item);
+
+            // Render Overview Tags
+            renderOverviewTags();
+
+            // Standalone Worldbook Category Handling
+            if (item.category === 'worldbooks') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('worldbook');
+                selectedWbEntryIndexes.clear();
+                renderWorldbookEntries();
+                return;
+            }
+
+            // Standalone Extras / Side Stories Category Handling
+            if (item.category === 'regex') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#7a9bb8]"></i><span>番外/小剧场 内容</span>`;
+                document.getElementById('docFullContentText').innerText = item.rawText || '无内容';
+                lucide.createIcons();
+                return;
+            }
+
+            if (item.category === 'gallery') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                const imgUrl = getAssetImageUrl(item);
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>买图大图预览</span>`;
+                document.getElementById('docFullContentText').innerHTML = `
+                    <div class="flex flex-col items-center gap-3 py-2">
+                        <img src="${imgUrl}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            if (item.category === 'emojis') {
+                switchDetailTab('emoji-grid');
+                selectedEmojiPackItems.clear();
+                if (item.emojiList) item.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
+                renderEmojiPackGrid();
+                return;
+            }
+
+            if (item.category === 'docs') { document.getElementById('secondaryPillsBar').classList.add('hidden'); switchDetailTab('doc-full'); document.getElementById('docFullContentText').innerText = item.rawText || '无内容'; return; }
+            
+            document.getElementById('secondaryPillsBar').classList.remove('hidden');
+            let pText = item.personality || extractPersonalityDeep(item.cardData || {});
+            document.getElementById('overviewPersonalityText').innerText = pText;
+            personalityCollapsed = true; document.getElementById('overviewPersonalityBody').classList.add('hidden'); document.getElementById('personalityChevron').classList.remove('rotate-180');
+            renderGreetingsList(item); renderWorldbookEntries(); renderRegexEntries(); switchDetailTab('overview');
+        }
+
+        function renderEmojiPackGrid() {
+            const container = document.getElementById('emojiPackGridContainer');
+            if (!container || !currentItem || !currentItem.emojiList) return;
+            container.innerHTML = '';
+
+            currentItem.emojiList.forEach(em => {
+                const isChecked = selectedEmojiPackItems.has(em.id);
+                const itemCard = document.createElement('div');
+                itemCard.className = "ui-card p-2 flex flex-col justify-between hover:border-[#d88c9a] transition relative group";
+                itemCard.innerHTML = `
+                    <div class="absolute top-1.5 left-1.5 z-10">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePackEmojiSelection('${em.id}')" class="w-3.5 h-3.5 text-[#d88c9a] rounded border-[#f2e3e3] cursor-pointer">
+                    </div>
+                    <div class="h-24 rounded-lg overflow-hidden bg-[#faf6f0] mb-1 border border-[#f7ecee] flex items-center justify-center p-1">
+                        <img src="${em.url}" class="max-w-full max-h-full object-contain" onerror="this.src='https://placehold.co/100x100/faf6f0/a38b8d?text=图片失效'">
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-[11px] text-[#4a3e3d] text-center truncate px-0.5">${em.name}</h4>
+                        <p class="text-[9px] text-[#a38b8d] font-mono text-center truncate">${em.url}</p>
+                    </div>
+                `;
+                container.appendChild(itemCard);
+            });
+            lucide.createIcons();
+        }
+
+        function togglePersonalityCollapse() {
+            personalityCollapsed = !personalityCollapsed;
+            const body = document.getElementById('overviewPersonalityBody'), chevron = document.getElementById('personalityChevron');
+            if (personalityCollapsed) { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+            else { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+        }
+
+        function setupHeaderExportActions(item) {
+            const container = document.getElementById('headerExportActions');
+            container.innerHTML = `<button onclick="renameCurrentItem()" class="p-1.5 rounded-lg text-[#b86b7a] hover:bg-[#f5e1e3] transition ml-1" title="重命名"><i data-lucide="edit-3" class="w-4 h-4"></i></button><button onclick="deleteCurrentItem()" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition ml-1" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            
+            if (item.category === 'docs') {
+                const btnCopy = document.createElement('button'); btnCopy.onclick = () => { navigator.clipboard.writeText(item.rawText || ''); showToast('📋', '文档内容已复制！'); };
+                btnCopy.className = "px-2.5 py-1 rounded-full bg-[#e098a5] text-white hover:bg-[#d88c9a] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnCopy.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> 复制全文`;
+                container.insertBefore(btnCopy, container.firstChild);
+
+                const btnTxt = document.createElement('button'); btnTxt.onclick = () => downloadText(item.rawText || '', `${item.name.replace(/\.[^/.]+$/, '')}.txt`, 'text/plain');
+                btnTxt.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnTxt.innerHTML = `<i data-lucide="file-text" class="w-3 h-3"></i> 导出 TXT`;
+                container.insertBefore(btnTxt, container.firstChild);
+
+                const btnDocx = document.createElement('button'); btnDocx.onclick = () => {
+                    const docxContent = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><title>${item.name}</title></head>
+                        <body>
+                            <h2>${item.name}</h2>
+                            <hr/>
+                            <pre style="font-family: sans-serif; font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${(item.rawText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        </body>
+                        </html>
+                    `;
+                    downloadText(docxContent, `${item.name.replace(/\.[^/.]+$/, '')}.docx`, 'application/vnd.ms-word');
+                    showToast('📘', '已成功导出为 DOCX 文档！');
+                };
+                btnDocx.className = "px-2.5 py-1 rounded-full bg-[#7a9bb8] text-white hover:bg-[#688ca6] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnDocx.innerHTML = `<i data-lucide="file" class="w-3 h-3"></i> 导出 DOCX`;
+                container.insertBefore(btnDocx, container.firstChild);
+            }
+
+            if (item.category === 'regex') {
+                const btnCopy = document.createElement('button'); btnCopy.onclick = () => { navigator.clipboard.writeText(item.rawText || ''); showToast('📋', '番外/小剧场 内容已复制！'); };
+                btnCopy.className = "px-2.5 py-1 rounded-full bg-[#e098a5] text-white hover:bg-[#d88c9a] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnCopy.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> 复制内容`;
+                container.insertBefore(btnCopy, container.firstChild);
+
+                const btnTxt = document.createElement('button'); btnTxt.onclick = () => downloadText(item.rawText || '', `${item.name}.txt`, 'text/plain');
+                btnTxt.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnTxt.innerHTML = `<i data-lucide="file-text" class="w-3 h-3"></i> 导出 TXT`;
+                container.insertBefore(btnTxt, container.firstChild);
+
+                const btnDocx = document.createElement('button'); btnDocx.onclick = () => {
+                    const docxContent = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><title>${item.name}</title></head>
+                        <body>
+                            <h2>${item.name}</h2>
+                            <hr/>
+                            <pre style="font-family: sans-serif; font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${(item.rawText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        </body>
+                        </html>
+                    `;
+                    downloadText(docxContent, `${item.name}.docx`, 'application/vnd.ms-word');
+                    showToast('📘', '已成功导出为 DOCX 文档！');
+                };
+                btnDocx.className = "px-2.5 py-1 rounded-full bg-[#7a9bb8] text-white hover:bg-[#688ca6] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnDocx.innerHTML = `<i data-lucide="file" class="w-3 h-3"></i> 导出 DOCX`;
+                container.insertBefore(btnDocx, container.firstChild);
+            }
+
+            if (item.category === 'worldbooks') {
+                const btnWbAll = document.createElement('button'); btnWbAll.onclick = () => exportCardWorldbookFull(item);
+                btnWbAll.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm"; 
+                btnWbAll.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出完整世界书JSON`; 
+                container.insertBefore(btnWbAll, container.firstChild);
+            }
+
+            if (item.category === 'gallery') {
+                const btnDownloadImg = document.createElement('button');
+                btnDownloadImg.onclick = () => {
+                    const imgUrl = getAssetImageUrl(item);
+                    if (imgUrl.startsWith('data:image') || imgUrl.startsWith('blob:')) {
+                        const a = document.createElement('a'); a.href = imgUrl; a.download = `${item.name}.png`; a.click();
+                    } else {
+                        window.open(imgUrl, '_blank');
+                    }
+                    showToast('📥', '已触发图片保存/下载！');
+                };
+                btnDownloadImg.className = "px-2.5 py-1 rounded-full bg-[#d88c9a] text-white hover:bg-[#c97b8b] text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnDownloadImg.innerHTML = `<i data-lucide="download" class="w-3 h-3"></i> 下载图片`;
+                container.insertBefore(btnDownloadImg, container.firstChild);
+            }
+
+            if (item.category === 'cards') {
+                const btnWb = document.createElement('button'); btnWb.onclick = () => exportCardWorldbookFull(item);
+                btnWb.className = "px-2.5 py-1 rounded-full bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[11px] font-semibold transition flex items-center gap-1 border border-[#f5e1e3]"; btnWb.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出世界书`; container.insertBefore(btnWb, container.firstChild);
+
+                if (item.fileType === 'png' && item.rawBuffer) {
+                    const btnPng = document.createElement('button'); btnPng.onclick = () => downloadBuffer(item.rawBuffer, `${item.name}.png`, 'image/png');
+                    btnPng.className = "px-2.5 py-1 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-[11px] font-semibold transition flex items-center gap-1"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
+                }
+                const btnJson = document.createElement('button'); btnJson.onclick = () => downloadText(item.rawText || JSON.stringify(item.cardData, null, 2), `${item.name}.json`, 'application/json');
+                btnJson.className = "px-2.5 py-1 rounded-full bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2] text-[11px] font-semibold transition flex items-center gap-1"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
+            }
+            lucide.createIcons();
+        }
+
+        function downloadText(text, filename, mimeType) {
+            const blob = new Blob([text], { type: `${mimeType};charset=utf-8` }), url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function downloadBuffer(buffer, filename, mimeType) {
+            const blob = new Blob([buffer], { type: mimeType }), url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function renderGreetingsList(item) {
+            const container = document.getElementById('overviewGreetingsList'); container.innerHTML = '';
+            const allGreetings = []; if (item.firstMes) allGreetings.push({ title: '主开场白', text: item.firstMes });
+            const alts = item.alternateGreetings || item.cardData?.data?.alternate_greetings || []; alts.forEach((g, idx) => allGreetings.push({ title: `备用开场白 #${idx + 1}`, text: g }));
+            if (allGreetings.length === 0) { container.innerHTML = `<div class="text-xs text-[#a38b8d] py-8 text-center">无开场白设定</div>`; return; }
+            allGreetings.forEach((gItem, index) => {
+                const box = document.createElement('div'); box.className = "wb-card-container space-y-2";
+                box.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><button onclick="toggleGreetingItemCollapse(${index})" class="text-xs font-bold text-[#b86b7a] flex items-center gap-1.5"><i data-lucide="chevron-down" id="greeting-chevron-${index}" class="w-3.5 h-3.5 text-[#d88c9a] transition-transform duration-200"></i><span>${gItem.title}</span></button><button onclick="copyGreetingText(${index})" class="text-xs text-[#a38b8d] hover:text-[#d88c9a] flex items-center gap-1"><i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制</button></div><div id="greeting-body-${index}" class="hidden"><div id="greeting-text-${index}" class="text-xs text-[#5c494a] leading-relaxed font-sans whitespace-pre-wrap pt-1">${gItem.text}</div></div>`;
+                container.appendChild(box);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleGreetingItemCollapse(index) {
+            const body = document.getElementById(`greeting-body-${index}`), chevron = document.getElementById(`greeting-chevron-${index}`);
+            if (body.classList.contains('hidden')) { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+            else { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+        }
+
+        function copyGreetingText(index) {
+            const el = document.getElementById(`greeting-text-${index}`);
+            if (el) { navigator.clipboard.writeText(el.innerText); showToast('📋', '开场白已复制！'); }
+        }
+
+        function closeDetailView() {
+            document.getElementById('pageTitle').innerText = '资源合集'; document.getElementById('detailView').classList.add('hidden'); document.getElementById('detailView').classList.remove('flex'); document.getElementById('listView').classList.remove('hidden'); currentItem = null;
+        }
+
+        function switchDetailTab(subtab) {
+            document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+            const activePill = document.getElementById(`detail-tab-${subtab}`); if (activePill) activePill.classList.add('active');
+            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full', 'emoji-grid'].forEach(st => {
+                const el = document.getElementById(`subview-${st}`);
+                if (st === subtab) el.classList.remove('hidden'); else el.classList.add('hidden');
+            });
+        }
+
+        let selectedWbEntryIndexes = new Set();
+
+        function selectAllWbEntries(select) {
+            const wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (select) {
+                entries.forEach((_, idx) => selectedWbEntryIndexes.add(idx));
+            } else {
+                selectedWbEntryIndexes.clear();
+            }
+            renderWorldbookEntries();
+        }
+
+        function toggleWbEntrySelection(index, e) {
+            e.stopPropagation();
+            if (selectedWbEntryIndexes.has(index)) selectedWbEntryIndexes.delete(index);
+            else selectedWbEntryIndexes.add(index);
+        }
+
+        function exportSelectedWbJSON() {
+            if (!currentItem) return;
+            const wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            const selectedEntries = entries.filter((_, idx) => selectedWbEntryIndexes.has(idx));
+            
+            if (selectedEntries.length === 0) {
+                showToast('ℹ️', '请先勾选需要导出的世界书词条！');
+                return;
+            }
+
+            const exportedWb = {
+                name: `${currentItem.name}_世界书`,
+                description: `从角色卡 ${currentItem.name} 导出的世界书`,
+                entries: selectedEntries
+            };
+
+            downloadText(JSON.stringify(exportedWb, null, 2), `${currentItem.name}_选中世界书.json`, 'application/json');
+            showToast('📚', `已成功导出包含 ${selectedEntries.length} 个词条的世界书 JSON！`);
+        }
+
+        function exportCardWorldbookFull(item) {
+            const wb = item?.worldbook || item?.cardData?.data?.character_book || item?.cardData?.character_book || item?.cardData;
+            const entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (!entries || entries.length === 0) {
+                showToast('ℹ️', '该角色卡暂无关联世界书内容');
+                return;
+            }
+            const exportedWb = {
+                name: `${item.name}_完整世界书`,
+                description: `从角色卡 ${item.name} 导出的完整世界书`,
+                entries: entries
+            };
+            downloadText(JSON.stringify(exportedWb, null, 2), `${item.name}_完整世界书.json`, 'application/json');
+            showToast('📚', `已成功导出完整世界书 JSON（共 ${entries.length} 条）！`);
+        }
+
+        function renderWorldbookEntries() {
+            const container = document.getElementById('wbEntriesList'); container.innerHTML = '';
+            let wb = currentItem?.worldbook || currentItem?.cardData?.data?.character_book || currentItem?.cardData?.character_book || currentItem?.cardData;
+            
+            // Normalize entries if stored as Object dictionary
+            let entries = [];
+            if (wb) {
+                if (Array.isArray(wb.entries)) entries = wb.entries;
+                else if (typeof wb.entries === 'object') entries = Object.values(wb.entries);
+                else if (Array.isArray(wb)) entries = wb;
+            }
+
+            if (!entries || entries.length === 0) { container.innerHTML = `<div class="py-8 text-center text-[#a38b8d] text-xs">暂无世界书词条</div>`; return; }
+            
+            // Default select all entries on open
+            if (selectedWbEntryIndexes.size === 0) {
+                entries.forEach((_, idx) => selectedWbEntryIndexes.add(idx));
+            }
+
+            entries.forEach((entry, index) => {
+                const isSelected = selectedWbEntryIndexes.has(index);
+                const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词'), commentTitle = entry.comment || keysText || `词条 #${index + 1}`;
+                const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
+                card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="flex items-center gap-2 min-w-0 flex-1"><i data-lucide="grip-vertical" class="w-4 h-4 text-[#e2c2c6] shrink-0"></i><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWbEntrySelection(${index}, event)" class="w-4 h-4 text-[#d88c9a] rounded border-[#f2e3e3] cursor-pointer"><button onclick="toggleWbEntryCollapse(${index})" class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1 truncate"><i data-lucide="chevron-down" id="wb-chevron-${index}" class="w-3.5 h-3.5 text-[#d88c9a] shrink-0 transition-transform duration-200"></i><span class="truncate">词条 · ${commentTitle}</span></button></div><div class="flex items-center gap-1.5 shrink-0"><span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-[#e8f0f8] text-[#688ca6]' : 'bg-[#f5e8e8] text-[#8c7173]'}">${entry.constant ? '🔵 始终' : '⚪ 条件'}</span><button onclick="copyEntryContent(${index})" class="p-1 rounded text-[#a38b8d] hover:text-[#d88c9a]"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button><button onclick="deleteEntry(${index})" class="p-1 rounded text-[#a38b8d] hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div><div id="wb-body-${index}" class="space-y-3 hidden"><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">标题 / 注释</label><input type="text" value="${commentTitle}" onchange="updateEntryField(${index}, 'comment', this.value)" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-xl px-3 py-1.5 text-xs font-medium text-[#5c494a]"></div><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">内容</label><textarea onchange="updateEntryField(${index}, 'content', this.value)" class="w-full h-36 bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#5c494a] custom-scrollbar">${entry.content || ''}</textarea></div></div>`;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleWbEntryCollapse(index) {
+            const body = document.getElementById(`wb-body-${index}`), chevron = document.getElementById(`wb-chevron-${index}`);
+            if (body.classList.contains('hidden')) { body.classList.remove('hidden'); chevron.classList.add('rotate-180'); }
+            else { body.classList.add('hidden'); chevron.classList.remove('rotate-180'); }
+        }
+
+        async function updateEntryField(index, field, value) {
+            const wb = currentItem.worldbook || currentItem.cardData, entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) { entries[index][field] = value; await saveAsset(currentItem); }
+        }
+
+        function renderRegexEntries() {
+            const container = document.getElementById('regexEntriesList'); container.innerHTML = '';
+            const regexList = currentItem?.regexScripts || currentItem?.cardData?.data?.extensions?.regex_scripts || currentItem?.cardData;
+            const scripts = Array.isArray(regexList) ? regexList : [];
+            if (!scripts || scripts.length === 0) { container.innerHTML = `<div class="py-8 text-center text-[#a38b8d] text-xs">暂无正则替换规则</div>`; return; }
+            scripts.forEach((script, idx) => {
+                const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
+                card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="font-bold text-xs text-[#4a3e3d] flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5 text-[#d88c9a]"></i><span>${script.scriptName || `正则规则 #${idx + 1}`}</span></div></div><div><div class="bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#b86b7a] break-all">${script.findRegex || ''}</div></div>`;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function copyEntryContent(index) {
+            const wb = currentItem.worldbook || currentItem.cardData, entries = wb?.entries || (Array.isArray(wb) ? wb : []);
+            if (entries[index]) { navigator.clipboard.writeText(entries[index].content || ''); showToast('📋', '词条内容已复制！'); }
+        }
+
+        async function deleteCurrentItem() {
+            if (!currentItem) return;
+            if (confirm(`确定要删除“${currentItem.name}”吗？`)) {
+                const idToDelete = currentItem.id;
+                const tx = db.transaction('assets', 'readwrite'); 
+                tx.objectStore('assets').delete(idToDelete);
+                tx.oncomplete = async () => { 
+                    allAssetsCache = null; // Clear memory cache immediately!
+                    if (supabaseClient) { 
+                        try { await supabaseClient.from('tavern_assets').delete().eq('id', idToDelete); } catch(e){} 
+                    } 
+                    closeDetailView(); 
+                    updateBadges(); 
+                    renderItems(); 
+                    showToast('🗑️', '已成功删除资产！'); 
+                };
+            }
+        }
+
+        function copyText(id) { const text = document.getElementById(id)?.innerText; if (text) { navigator.clipboard.writeText(text); showToast('📋', '文本已复制！'); } }
+
+        // Register PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) { for(let registration of registrations) { registration.unregister(); } });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(() => {
+                    console.log('Service Worker Registered Successfully');
+                }).catch(err => {
+                    console.log('Service Worker Registration Failed: ', err);
+                });
+            });
+        }
+    
+
+    const DB_NAME = '
