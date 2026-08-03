@@ -166,6 +166,22 @@
                     </div>
                     <span id="badge-docs" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
+
+                <button onclick="switchTab('gallery')" id="tab-gallery" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span>买图合集 (Gallery)</span>
+                    </div>
+                    <span id="badge-gallery" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
+                </button>
+
+                <a href="https://font-local-preview.vercel.app/" target="_blank" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition group">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="type" class="w-4 h-4 text-[#b87d93]"></i>
+                        <span>字体预览箱 (Fonts)</span>
+                    </div>
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-[#a38b8d] group-hover:text-[#d88c9a] transition"></i>
+                </a>
             </div>
 
             <!-- GitHub Sync Collapsible Section -->
@@ -283,6 +299,42 @@
 
         <!-- Section 1: Item Grid/List View -->
         <div id="listView" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            
+            <!-- Custom Panel for Gallery (Bought Pictures) Area -->
+            <div id="galleryBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
+                <div class="flex items-center justify-between border-b border-[#f5e1e3] pb-2 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span class="text-xs font-bold text-[#784d52]">上传 / 存入买图相册</span>
+                    </div>
+                    <div class="text-[11px] text-[#b86b7a] font-medium">存入已购买的立绘/插画图片，支持竖版 1 排 2 张展现</div>
+                </div>
+
+                <div class="bg-white border border-[#f2e3e3] rounded-xl p-3 space-y-2.5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="md:col-span-1">
+                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">图片名称/描述:</label>
+                            <input type="text" id="galleryTitleInput" placeholder="例如：买图#1、设子立绘..." class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a] font-medium">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-bold text-[#784d52] mb-1">选择图片文件上传 或 粘贴网络图片URL:</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="galleryUrlInput" placeholder="粘贴 https://... 图片直链" class="flex-1 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
+                                <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-xs font-semibold transition shrink-0">
+                                    选择本地图片
+                                    <input type="file" id="galleryFileInput" accept="image/*" class="hidden" onchange="handleGalleryFileUpload(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-0.5">
+                        <button onclick="saveGalleryPictureAsset()" class="px-4 py-1.5 rounded-full bg-[#d88c9a] hover:bg-[#c97b8b] text-white text-xs font-bold shadow-sm shadow-[#d88c9a]/30 transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>存入买图库</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Custom Panel for Extras & Side Stories -->
             <div id="extrasBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#e8f0f8] bg-[#f4f8fb]">
@@ -1117,7 +1169,7 @@
         }
 
         async function updateBadges() {
-            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0 };
+            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0, gallery: 0 };
             assets.forEach(a => { if (counts[a.category] !== undefined) counts[a.category]++; });
             for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
         }
@@ -1420,24 +1472,71 @@
             renderItems();
         }
 
+        async function handleGalleryFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const titleInput = document.getElementById('galleryTitleInput');
+            if (titleInput && !titleInput.value) {
+                titleInput.value = file.name.replace(/\.[^/.]+$/, '');
+            }
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('galleryUrlInput').value = evt.target.result;
+                showToast('🖼️', '图片文件已成功转为本地数据！');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveGalleryPictureAsset() {
+            const titleInput = document.getElementById('galleryTitleInput');
+            const urlInput = document.getElementById('galleryUrlInput');
+            const title = titleInput ? titleInput.value.trim() : '';
+            const imgUrl = urlInput ? urlInput.value.trim() : '';
+
+            if (!title) { showToast('⚠️', '请先填写买图名字/描述！'); return; }
+            if (!imgUrl) { showToast('⚠️', '请粘贴图片URL或选择本地图片！'); return; }
+
+            const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await saveAsset({ id, category: 'gallery', name: title, fileType: 'img', rawText: imgUrl, createdAt: Date.now() });
+
+            titleInput.value = ''; urlInput.value = '';
+            document.getElementById('galleryFileInput').value = '';
+            updateBadges(); renderItems();
+            showToast('🎉', `已成功存入买图 “${title}”！`);
+        }
+
         async function renderItems() {
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
+
+            if (currentTab === 'gallery') {
+                container.className = "grid grid-cols-2 gap-3";
+            } else {
+                container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3";
+            }
 
             renderTagFilterBar();
 
             const builderPanel = document.getElementById('emojiExportBuilderPanel');
             const extrasPanel = document.getElementById('extrasBuilderPanel');
+            const galleryPanel = document.getElementById('galleryBuilderPanel');
             
             if (currentTab === 'emojis') { 
                 builderPanel.classList.remove('hidden'); 
                 extrasPanel.classList.add('hidden');
+                galleryPanel.classList.add('hidden');
             } else if (currentTab === 'regex') {
                 builderPanel.classList.add('hidden'); 
                 extrasPanel.classList.remove('hidden');
+                galleryPanel.classList.add('hidden');
+            } else if (currentTab === 'gallery') {
+                builderPanel.classList.add('hidden'); 
+                extrasPanel.classList.add('hidden');
+                galleryPanel.classList.remove('hidden');
             } else { 
                 builderPanel.classList.add('hidden'); 
                 extrasPanel.classList.add('hidden');
+                galleryPanel.classList.add('hidden');
             }
 
             const filtered = assets.filter(a => {
@@ -1474,7 +1573,18 @@
                 card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group";
                 card.onclick = () => openDetailView(item);
 
-                if (currentTab === 'emojis') {
+                if (currentTab === 'gallery') {
+                    const imgUrl = item.rawText || '';
+                    card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
+                    card.innerHTML = `
+                        <div class="aspect-[3/4] rounded-xl overflow-hidden bg-[#fdf4f5] mb-1.5 border border-[#f5e1e3] flex items-center justify-center p-0.5">
+                            <img src="${imgUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.src='https://placehold.co/300x400/fdf4f5/d88c9a?text=图片加载失败'">
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-xs text-[#4a3e3d] text-center truncate px-0.5">${item.name}</h3>
+                        </div>
+                    `;
+                } else if (currentTab === 'emojis') {
                     const count = item.emojiList ? item.emojiList.length : 0;
                     const previewCover = item.emojiList && item.emojiList[0] ? item.emojiList[0].url : '';
                     const isChecked = selectedEmojiPackIdsInList.has(item.id);
@@ -1533,8 +1643,21 @@
                 return;
             }
 
-            if (item.category === 'emojis') {
+            if (item.category === 'gallery') {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>买图大图预览</span>`;
+                document.getElementById('docFullContentText').innerHTML = `
+                    <div class="flex flex-col items-center gap-3 py-2">
+                        <img src="${item.rawText || ''}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
+                        <p class="text-xs text-[#8c7173] font-mono break-all text-center">${item.rawText || ''}</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            if (item.category === 'emojis') {
                 switchDetailTab('emoji-grid');
                 selectedEmojiPackItems.clear();
                 if (item.emojiList) item.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
