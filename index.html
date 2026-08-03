@@ -1252,7 +1252,43 @@
         };
         request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); initGithubClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); setupGlobalPasteListener(); };
 
-        function switchTab(tab) { currentTab = tab; closeDetailView(); toggleSidebar(); renderItems(); }
+        function switchTab(tab) {
+    currentTab = tab;
+    closeDetailView();
+    toggleSidebar();
+    
+    const fontsPanel = document.getElementById('fontsBuilderPanel');
+    const galleryPanel = document.getElementById('galleryBuilderPanel');
+    const extrasPanel = document.getElementById('extrasBuilderPanel');
+    const emojiPanel = document.getElementById('emojiExportBuilderPanel');
+    const itemsGrid = document.getElementById('itemsContainer');
+    const searchBar = document.getElementById('searchInput')?.parentElement?.parentElement;
+    
+    if (fontsPanel) fontsPanel.classList.add('hidden');
+    if (galleryPanel) galleryPanel.classList.add('hidden');
+    if (extrasPanel) extrasPanel.classList.add('hidden');
+    if (emojiPanel) emojiPanel.classList.add('hidden');
+    if (itemsGrid) itemsGrid.classList.remove('hidden');
+    if (searchBar) searchBar.classList.remove('hidden');
+
+    if (tab === 'fonts') {
+        if (fontsPanel) fontsPanel.classList.remove('hidden');
+        if (itemsGrid) itemsGrid.classList.add('hidden');
+        if (searchBar) searchBar.classList.add('hidden');
+        if (typeof renderList === 'function') renderList();
+    } else if (tab === 'gallery') {
+        if (galleryPanel) galleryPanel.classList.remove('hidden');
+        renderItems();
+    } else if (tab === 'regex') {
+        if (extrasPanel) extrasPanel.classList.remove('hidden');
+        renderItems();
+    } else if (tab === 'emojis') {
+        if (emojiPanel) emojiPanel.classList.remove('hidden');
+        renderItems();
+    } else {
+        renderItems();
+    }
+}
 
         // Setup Global Paste Listener for Emojis
         function setupGlobalPasteListener() {
