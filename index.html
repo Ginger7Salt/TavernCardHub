@@ -2135,7 +2135,7 @@
                 card.onclick = () => openDetailView(item);
 
                 if (currentTab === 'gallery') {
-                    let imgUrl = item.rawText || ''; if (item.rawBuffer) { const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' }); imgUrl = URL.createObjectURL(blob); }
+                    const imgUrl = item.rawText || '';
                     card.className = "ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] group";
                     card.innerHTML = `
                         <div class="aspect-square rounded-lg overflow-hidden bg-[#fdf4f5] mb-1 border border-[#f5e1e3] flex items-center justify-center p-0.5">
@@ -2356,7 +2356,7 @@
             if (item.category === 'gallery') {
                 const btnDownloadImg = document.createElement('button');
                 btnDownloadImg.onclick = () => {
-                    let imgUrl = item.rawText || ''; if (item.rawBuffer) { const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' }); imgUrl = URL.createObjectURL(blob); }
+                    const imgUrl = item.rawText || '';
                     if (imgUrl.startsWith('data:image')) {
                         const a = document.createElement('a'); a.href = imgUrl; a.download = `${item.name}.png`; a.click();
                     } else {
