@@ -73,7 +73,7 @@
             <div class="space-y-1">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-[#b89b9d] px-2 mb-1">资产分类</div>
                 
-                <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('cards', event)" id="tab-cards" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="users" class="w-4 h-4 text-[#d88c9a]"></i>
                         <span>角色卡 (Cards)</span>
@@ -81,7 +81,7 @@
                     <span id="badge-cards" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('worldbooks')" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('worldbooks', event)" id="tab-worldbooks" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="book-open" class="w-4 h-4 text-[#b87d93]"></i>
                         <span>世界书 (Worldbooks)</span>
@@ -89,7 +89,7 @@
                     <span id="badge-worldbooks" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('emojis')" id="tab-emojis" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('emojis', event)" id="tab-emojis" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="smile" class="w-4 h-4 text-[#d99b82]"></i>
                         <span>表情包合集 (Emojis)</span>
@@ -97,7 +97,7 @@
                     <span id="badge-emojis" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('regex')" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('regex', event)" id="tab-regex" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="sparkles" class="w-4 h-4 text-[#82a39b]"></i>
                         <span>番外与小剧场 (Extras)</span>
@@ -105,7 +105,7 @@
                     <span id="badge-regex" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('docs')" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('docs', event)" id="tab-docs" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="file-text" class="w-4 h-4 text-[#7b9ba6]"></i>
                         <span>文档/文本 (Docs)</span>
@@ -113,14 +113,14 @@
                     <span id="badge-docs" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('apikeys')" id="tab-apikeys" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('apikeys', event)" id="tab-apikeys" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="key-round" class="w-4 h-4 text-[#d88c9a]"></i>
                         <span>API 密钥</span>
                     </div>
                     <span id="apikeyCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
-                <button onclick="switchTab('gallery')" id="tab-gallery" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('gallery', event)" id="tab-gallery" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
                         <span>买图合集 (Gallery)</span>
@@ -128,7 +128,7 @@
                     <span id="badge-gallery" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
-                <button onclick="switchTab('fonts')" id="tab-fonts" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                <button onclick="switchTab('fonts', event)" id="tab-fonts" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="type" class="w-4 h-4 text-[#b87d93]"></i>
                         <span>字体预览箱 (Fonts)</span>

@@ -1,8 +1,9 @@
-function switchTab(tab) {
+function switchTab(tab, e) {
     currentTab = tab;
     if (typeof currentFolderOpened !== 'undefined') currentFolderOpened = null;
     closeDetailView();
-    toggleSidebar();
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (e && e.preventDefault) e.preventDefault();
 
     const apikeysPanel = document.getElementById('apikeysBuilderPanel');
     if (apikeysPanel) apikeysPanel.classList.add('hidden');
@@ -43,6 +44,8 @@ function switchTab(tab) {
     } else {
         renderItems();
     }
+    // 最后关闭 sidebar,确保点击事件不再冒泡到 overlay
+    if (typeof toggleSidebar === 'function') toggleSidebar();
 }
 
         // Setup Global Paste Listener for Emojis
