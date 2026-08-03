@@ -1958,14 +1958,18 @@
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const title = file.name.replace(/\.[^/.]+$/, '');
-                const arrayBuffer = await file.arrayBuffer();
+                const base64Data = await new Promise((res) => {
+                    const r = new FileReader();
+                    r.onload = (ev) => res(ev.target.result);
+                    r.readAsDataURL(file);
+                });
                 const id = 'asset_' + (Date.now() + i) + '_' + Math.random().toString(36).substr(2, 9);
                 await saveAsset({ 
                     id, 
                     category: 'gallery', 
                     name: title, 
                     fileType: file.type || 'image/png', 
-                    rawBuffer: arrayBuffer, 
+                    cover: base64Data, 
                     createdAt: Date.now() + i 
                 });
                 count++;
