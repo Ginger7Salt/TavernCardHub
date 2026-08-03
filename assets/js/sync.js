@@ -26,4 +26,21 @@ function toggleCloudConfigCollapse() {
                 store.createIndex('category', 'category', { unique: false });
             }
         };
-        request.onsuccess = (e) => { db = e.target.result; initSupabaseClient(); initGithubClient(); updateBadges(); renderItems(); autoSyncFromCloudSilent(); renderEmojiFormatBuilder(); setupGlobalPasteListener(); };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            // ui.js 在本文件之后加载，等待所有模块完成定义后再启动界面。
+            const boot = () => {
+                if (typeof updateBadges !== 'function' || typeof renderItems !== 'function') {
+                    setTimeout(boot, 0);
+                    return;
+                }
+                initSupabaseClient();
+                initGithubClient();
+                updateBadges();
+                renderItems();
+                autoSyncFromCloudSilent();
+                renderEmojiFormatBuilder();
+                setupGlobalPasteListener();
+            };
+            boot();
+        };
