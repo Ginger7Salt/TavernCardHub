@@ -984,10 +984,21 @@ if (fileIn) {
             }
 
             filtered.forEach(item => {
-
                 const card = document.createElement('div');
-                card.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group";
-                card.onclick = () => openDetailView(item);
+                const isSelected = selectedAssetIds.has(item.id);
+                
+                card.className = `ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group ${isSelected ? 'ring-2 ring-[#d88c9a] bg-[#fdf6f7]' : ''}`;
+                
+                // 绑定长按事件
+                bindLongPressEvent(card, item.id);
+
+                card.onclick = (e) => {
+                    if (isMultiSelectMode) {
+                        toggleSelectAsset(item.id, e);
+                    } else {
+                        openDetailView(item);
+                    }
+                };
 
                 if (currentTab === 'gallery') {
                     const imgUrl = getAssetImageUrl(item);
@@ -1027,6 +1038,15 @@ if (fileIn) {
                     }
                     card.innerHTML = `<div>${coverHtml}<h3 class="font-bold text-sm text-[#4a3e3d] text-center truncate py-1">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 3).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}${item.tags.length > 3 ? `<span class="text-[9px] text-[#a38b8d]">+${item.tags.length - 3}</span>` : ''}</div>` : ''}</div>`;
                 }
+                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                if (isMultiSelectMode) {
+                    const checkBadge = document.createElement('div');
+                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.innerHTML = '✓';
+                    checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
+                    card.appendChild(checkBadge);
+                }
+
                 container.appendChild(card);
             });
             lucide.createIcons();
@@ -1077,7 +1097,7 @@ if (fileIn) {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('doc-full');
                 const imgUrl = getAssetImageUrl(item);
-                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>买图大图预览</span>`;
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>图库大图预览</span>`;
                 document.getElementById('docFullContentText').innerHTML = `
                     <div class="flex flex-col items-center gap-3 py-2">
                         <img src="${imgUrl}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
@@ -1365,6 +1385,15 @@ if (fileIn) {
                 const keysText = Array.isArray(entry.keys) ? entry.keys.join(', ') : (entry.keys || '无关键词'), commentTitle = entry.comment || keysText || `词条 #${index + 1}`;
                 const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
                 card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="flex items-center gap-2 min-w-0 flex-1"><i data-lucide="grip-vertical" class="w-4 h-4 text-[#e2c2c6] shrink-0"></i><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWbEntrySelection(${index}, event)" class="w-4 h-4 text-[#d88c9a] rounded border-[#f2e3e3] cursor-pointer"><button onclick="toggleWbEntryCollapse(${index})" class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1 truncate"><i data-lucide="chevron-down" id="wb-chevron-${index}" class="w-3.5 h-3.5 text-[#d88c9a] shrink-0 transition-transform duration-200"></i><span class="truncate">词条 · ${commentTitle}</span></button></div><div class="flex items-center gap-1.5 shrink-0"><span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${entry.constant ? 'bg-[#e8f0f8] text-[#688ca6]' : 'bg-[#f5e8e8] text-[#8c7173]'}">${entry.constant ? '🔵 始终' : '⚪ 条件'}</span><button onclick="copyEntryContent(${index})" class="p-1 rounded text-[#a38b8d] hover:text-[#d88c9a]"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button><button onclick="deleteEntry(${index})" class="p-1 rounded text-[#a38b8d] hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div></div><div id="wb-body-${index}" class="space-y-3 hidden"><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">标题 / 注释</label><input type="text" value="${commentTitle}" onchange="updateEntryField(${index}, 'comment', this.value)" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-xl px-3 py-1.5 text-xs font-medium text-[#5c494a]"></div><div><label class="block text-[11px] font-semibold text-[#8c7173] mb-1">内容</label><textarea onchange="updateEntryField(${index}, 'content', this.value)" class="w-full h-36 bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#5c494a] custom-scrollbar">${entry.content || ''}</textarea></div></div>`;
+                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                if (isMultiSelectMode) {
+                    const checkBadge = document.createElement('div');
+                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.innerHTML = '✓';
+                    checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
+                    card.appendChild(checkBadge);
+                }
+
                 container.appendChild(card);
             });
             lucide.createIcons();
@@ -1389,6 +1418,15 @@ if (fileIn) {
             scripts.forEach((script, idx) => {
                 const card = document.createElement('div'); card.className = "wb-card-container space-y-3";
                 card.innerHTML = `<div class="flex items-center justify-between pb-2 border-b border-[#f5e1e3]"><div class="font-bold text-xs text-[#4a3e3d] flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5 text-[#d88c9a]"></i><span>${script.scriptName || `正则规则 #${idx + 1}`}</span></div></div><div><div class="bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-2.5 text-xs font-mono text-[#b86b7a] break-all">${script.findRegex || ''}</div></div>`;
+                // 如果处于批量多选模式，在卡片右上角注入精致勾选圆框
+                if (isMultiSelectMode) {
+                    const checkBadge = document.createElement('div');
+                    checkBadge.className = `absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition ${isSelected ? 'bg-[#d88c9a] text-white' : 'bg-white/90 border border-gray-300 text-transparent'}`;
+                    checkBadge.innerHTML = '✓';
+                    checkBadge.onclick = (e) => toggleSelectAsset(item.id, e);
+                    card.appendChild(checkBadge);
+                }
+
                 container.appendChild(card);
             });
             lucide.createIcons();
@@ -1440,3 +1478,160 @@ function closeFolder() {
     currentFolderOpened = null;
     renderItems();
 }
+
+// ============================================================
+// 全页面长按批量选择、圆框勾选、全选、批量移动分类与批量删除
+// ============================================================
+
+let isMultiSelectMode = false;
+let selectedAssetIds = new Set();
+let longPressTimer = null;
+
+function toggleMultiSelectMode(enable = null) {
+    if (enable === null) isMultiSelectMode = !isMultiSelectMode;
+    else isMultiSelectMode = enable;
+
+    if (!isMultiSelectMode) {
+        selectedAssetIds.clear();
+    }
+    renderBatchActionBar();
+    renderItems();
+}
+
+function toggleSelectAsset(id, e) {
+    if (e) e.stopPropagation();
+    if (selectedAssetIds.has(id)) {
+        selectedAssetIds.delete(id);
+    } else {
+        selectedAssetIds.add(id);
+    }
+    renderBatchActionBar();
+    renderItems();
+}
+
+async function selectAllCurrentAssets() {
+    const assets = await getFilteredAssets();
+    if (selectedAssetIds.size === assets.length) {
+        selectedAssetIds.clear();
+    } else {
+        assets.forEach(a => selectedAssetIds.add(a.id));
+    }
+    renderBatchActionBar();
+    renderItems();
+}
+
+async function batchDeleteSelectedAssets() {
+    if (selectedAssetIds.size === 0) return;
+    if (!confirm(`确定要批量删除选中的 ${selectedAssetIds.size} 项资产吗？此操作无法撤销。`)) return;
+
+    try {
+        showToast('⌛', '正在批量删除...');
+        for (const id of selectedAssetIds) {
+            await deleteAssetFromDB(id);
+        }
+        showToast('🎉', `已成功删除 ${selectedAssetIds.size} 项资产`);
+        selectedAssetIds.clear();
+        isMultiSelectMode = false;
+        renderBatchActionBar();
+        allAssetsCache = null;
+        updateBadges();
+        await renderItems();
+    } catch(err) {
+        console.error('Batch delete failed', err);
+        showToast('❌', '批量删除失败');
+    }
+}
+
+async function batchMoveSelectedCategory() {
+    if (selectedAssetIds.size === 0) return;
+    const targetFolder = prompt('请输入要批量移动到的目标分类/文件夹名称：', currentFolderOpened || '');
+    if (targetFolder === null) return;
+
+    const folderName = targetFolder.trim();
+    try {
+        showToast('⌛', '正在批量移动分类...');
+        const allAssets = await getAllAssets();
+        for (const id of selectedAssetIds) {
+            const item = allAssets.find(a => a.id === id);
+            if (item) {
+                item.subCategory = folderName;
+                await saveAsset(item);
+            }
+        }
+        showToast('📁', `已将 ${selectedAssetIds.size} 项资产移动至 “${folderName || '未分类'}”`);
+        selectedAssetIds.clear();
+        isMultiSelectMode = false;
+        renderBatchActionBar();
+        allAssetsCache = null;
+        updateBadges();
+        await renderItems();
+    } catch(err) {
+        console.error('Batch move failed', err);
+        showToast('❌', '批量移动失败');
+    }
+}
+
+function renderBatchActionBar() {
+    let bar = document.getElementById('batchActionBar');
+    if (!isMultiSelectMode) {
+        if (bar) bar.classList.add('hidden');
+        return;
+    }
+
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'batchActionBar';
+        bar.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#4a3e3d] text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-[#6b5857] text-xs animate-in slide-in-from-bottom duration-200 max-w-[92vw] overflow-x-auto';
+        document.body.appendChild(bar);
+    }
+
+    bar.innerHTML = `
+        <span class="font-bold text-[#f2e3e3] whitespace-nowrap">已选 ${selectedAssetIds.size} 项</span>
+        <button onclick="selectAllCurrentAssets()" class="px-2.5 py-1 rounded-full bg-[#6b5857] hover:bg-[#856e6c] transition whitespace-nowrap">🔳 全选</button>
+        <button onclick="batchMoveSelectedCategory()" class="px-2.5 py-1 rounded-full bg-[#d88c9a] font-bold hover:bg-[#c97b8b] transition whitespace-nowrap">📁 移动分类</button>
+        <button onclick="batchDeleteSelectedAssets()" class="px-2.5 py-1 rounded-full bg-rose-500 font-bold hover:bg-rose-600 transition whitespace-nowrap">🗑️ 批量删除</button>
+        <button onclick="toggleMultiSelectMode(false)" class="text-gray-300 hover:text-white font-bold ml-1 text-base">&times;</button>
+    `;
+    bar.classList.remove('hidden');
+}
+
+function bindLongPressEvent(element, assetId) {
+    element.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            if (!isMultiSelectMode) {
+                isMultiSelectMode = true;
+                selectedAssetIds.add(assetId);
+                renderBatchActionBar();
+                renderItems();
+                if (navigator.vibrate) navigator.vibrate(40);
+                showToast('☑️', '进入长按多选模式');
+            }
+        }, 500);
+    }, { passive: true });
+
+    element.addEventListener('touchend', () => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+    });
+
+    element.addEventListener('touchmove', () => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+    });
+}
+
+function deleteAssetFromDB(id) {
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = db.transaction('assets', 'readwrite');
+            const store = tx.objectStore('assets');
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        } catch(e) { reject(e); }
+    });
+}
+
+window.toggleMultiSelectMode = toggleMultiSelectMode;
+window.toggleSelectAsset = toggleSelectAsset;
+window.selectAllCurrentAssets = selectAllCurrentAssets;
+window.batchDeleteSelectedAssets = batchDeleteSelectedAssets;
+window.batchMoveSelectedCategory = batchMoveSelectedCategory;
