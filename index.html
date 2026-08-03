@@ -2030,7 +2030,7 @@
 
                 return nameMatch || tagMatch || textMatch || personalityMatch || wbMatch;
             });
-            document.getElementById('itemCountText').innerText = `共 ${filtered.length} 项`;
+            // document.getElementById('itemCountText').innerText
             if (filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; lucide.createIcons(); return; }
 
             
@@ -2081,7 +2081,7 @@
                     return;
                 } else if (currentFolderOpened && !keyword) {
                     // Filter assets inside this folder
-                    filtered = filtered.filter(a => (a.subCategory || '未分类') === currentFolderOpened);
+                    filtered = filtered.filter(a => (a.subCategory || '未分类') === currentFolderOpened || (currentFolderOpened === '未分类' && !a.subCategory));
 
                     // Breadcrumb Header
                     const breadcrumb = document.createElement('div');
