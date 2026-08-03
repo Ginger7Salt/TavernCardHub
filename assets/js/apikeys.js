@@ -391,12 +391,27 @@ async function fetchApiKeyBalance(id) {
     for (const path of uniquePaths) {
         const fullUrl = origin.endsWith('/v1') && path.startsWith('/v1') ? origin + path.slice(3) : origin + path;
         try {
-            const res = await fetch(fullUrl, {
-                method: 'GET',
-                headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
-            });
-            if (!res.ok) continue;
-            const data = await res.json();
+            let res = null;
+            let data = null;
+            try {
+                res = await fetch(fullUrl, {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
+                });
+                if (res.ok) data = await res.json();
+            } catch(e) {}
+
+            if (!data && typeof CF_PROXY_PREFIX !== 'undefined') {
+                try {
+                    const proxyRes = await fetch(CF_PROXY_PREFIX + encodeURIComponent(fullUrl), {
+                        method: 'GET',
+                        headers: { 'Authorization': 'Bearer ' + item.apiKey, 'Accept': 'application/json' }
+                    });
+                    if (proxyRes.ok) data = await proxyRes.json();
+                } catch(e) {}
+            }
+
+            if (!data) continue;
 
             // A. neko-api-key-tool / New-API token 专属接口: { data: { unlimited_quota: true/false, total_granted: ..., total_used: ..., total_available: ... } }
             if (data && data.data && typeof data.data.total_used !== 'undefined') {
