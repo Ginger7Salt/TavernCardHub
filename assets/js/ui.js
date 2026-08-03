@@ -1510,7 +1510,7 @@ function toggleSelectAsset(id, e) {
 }
 
 async function selectAllCurrentAssets() {
-    const assets = await getFilteredAssets();
+    const assets = await getAllAssets();
     if (selectedAssetIds.size === assets.length) {
         selectedAssetIds.clear();
     } else {
