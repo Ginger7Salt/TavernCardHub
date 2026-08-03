@@ -1,4 +1,4 @@
-FontPreviewBox';
+const DB_NAME = 'FontPreviewBox';
     const DB_VERSION = 2;
     const STORE_NAME = 'fonts';
 

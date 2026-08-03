@@ -89,16 +89,23 @@ function switchTab(tab, e) {
             showToast('🎉', `成功生成包含 ${parsed.length} 个表情的合集 “${packName}”！`);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-    const fileIn = document.getElementById('fileInput');
-    if (fileIn) {
-        fileIn.addEventListener('change', async (e) => {
-            const files = Array.from(e.target.files);
-            for (let file of files) await processFile(file);
-            updateBadges(); renderItems(); e.target.value = '';
-        });
-    }
-});
+        const fileIn = document.getElementById('fileInput');
+if (fileIn) {
+    fileIn.addEventListener('change', async (e) => {
+        try {
+            const files = Array.from(e.target.files || []);
+            for (const file of files) await processFile(file);
+            allAssetsCache = null;
+            updateBadges();
+            await renderItems();
+        } catch (err) {
+            console.error('File import failed:', err);
+            showToast('❌', '导入失败，请检查文件格式');
+        } finally {
+            e.target.value = '';
+        }
+    });
+}
 
         async function processFile(file) {
             const ext = file.name.split('.').pop().toLowerCase(), id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1384,9 +1391,6 @@ function switchTab(tab, e) {
                 });
             });
         }
-    
-
-    const DB_NAME = '
 
 function openFolder(fName) {
     currentFolderOpened = fName;
