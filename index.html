@@ -44,7 +44,7 @@
             <label class="cursor-pointer px-3.5 py-1.5 rounded-full bg-[#d88c9a] hover:bg-[#c97b8b] text-white text-xs font-semibold shadow-sm shadow-[#d88c9a]/30 transition flex items-center gap-1.5">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
                 <span>导入文件</span>
-                <input type="file" id="fileInput" multiple accept=".png,.json,.txt,.docx" class="hidden">
+                <input type="file" id="fileInput" multiple accept=".zip,.css,.json,.txt,.docx,.png" class="hidden">
             </label>
         </div>
     </header>
@@ -128,6 +128,13 @@
                     <span id="badge-gallery" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
 
+                <button onclick="switchTab('themes', event)" id="tab-themes" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span>美化 (Themes)</span>
+                    </div>
+                    <span id="badge-themes" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
+                </button>
                 <button onclick="switchTab('fonts', event)" id="tab-fonts" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="type" class="w-4 h-4 text-[#b87d93]"></i>
@@ -408,6 +415,32 @@
                 </div>
             </div>
             
+            <!-- Custom Panel for Beauty & Theme Import -->
+            <div id="themeBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
+                <div class="flex items-center justify-between border-b border-[#f2dadc] pb-2 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <h2 class="text-xs font-bold text-[#5c494a]">美化主题包仓库 (支持 ZIP/JSON/CSS/文档)</h2>
+                    </div>
+                    <span class="text-[10px] text-[#b86b7a] font-mono">可以直接粘贴代码导入或拖入 ZIP 包</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="text" id="themeTitleInput" placeholder="美化名称 (例如: SullyOS毛玻璃主题、酒馆CSS...)" class="w-full bg-white border border-[#f2dadc] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="triggerThemeFileInput()" class="px-3 py-1.5 rounded-lg bg-white border border-[#f2dadc] text-[#b86b7a] text-xs font-bold shrink-0 hover:bg-[#fdf4f5]">📁 导入 ZIP / 文件</button>
+                            <input type="file" id="themeFileInput" accept=".zip,.css,.json,.txt,.docx" multiple class="hidden" onchange="handleThemeFilesImport(event)">
+                        </div>
+                    </div>
+                    <div>
+                        <textarea id="themeCodeInput" placeholder="可以在此直接粘贴 CSS 代码或 JSON 美化代码..." class="w-full h-24 bg-white border border-[#f2dadc] rounded-lg p-2 text-xs font-mono text-[#5c494a] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
+                    </div>
+                    <button type="button" onclick="savePastedThemeCode()" class="w-full py-1.5 rounded-xl bg-[#d88c9a] text-white hover:bg-[#c97b8b] transition font-bold text-xs text-center shadow-xs">
+                        💾 保存粘贴的美化代码
+                    </button>
+                </div>
+            </div>
+
             <!-- Custom Panel for Extras & Side Stories -->
             <div id="extrasBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#e8f0f8] bg-[#f4f8fb]">
                 <div class="flex items-center justify-between border-b border-[#d8e4f2] pb-2 flex-wrap gap-2">

@@ -15,6 +15,7 @@ function switchTab(tab, e) {
     const fontsPanel = document.getElementById('fontsBuilderPanel');
     const galleryPanel = document.getElementById('galleryBuilderPanel');
     const extrasPanel = document.getElementById('extrasBuilderPanel');
+    const themePanel = document.getElementById('themeBuilderPanel');
     const emojiPanel = document.getElementById('emojiExportBuilderPanel');
     const itemsGrid = document.getElementById('itemsContainer');
     const searchBar = document.getElementById('searchInput')?.parentElement?.parentElement;
@@ -22,6 +23,7 @@ function switchTab(tab, e) {
     if (fontsPanel) fontsPanel.classList.add('hidden');
     if (galleryPanel) galleryPanel.classList.add('hidden');
     if (extrasPanel) extrasPanel.classList.add('hidden');
+    if (themePanel) themePanel.classList.add('hidden');
     if (emojiPanel) emojiPanel.classList.add('hidden');
     if (itemsGrid) itemsGrid.classList.remove('hidden');
     if (searchBar) searchBar.classList.remove('hidden');
@@ -44,6 +46,9 @@ function switchTab(tab, e) {
         renderItems();
     } else if (tab === 'emojis') {
         if (emojiPanel) emojiPanel.classList.remove('hidden');
+        renderItems();
+    } else if (tab === 'themes') {
+        if (themePanel) themePanel.classList.remove('hidden');
         renderItems();
     } else {
         renderItems();
@@ -162,6 +167,14 @@ if (fileIn) {
             } else if (ext === 'docx') {
                 const arrayBuffer = await file.arrayBuffer(), result = await mammoth.extractRawText({ arrayBuffer });
                 await saveAsset({ id, category: 'docs', name: file.name, fileType: 'docx', rawText: result.value, rawBuffer: arrayBuffer, createdAt: Date.now() });
+            } else if (ext === 'css') {
+                const text = await file.text();
+                const targetCat = currentTab === 'themes' ? 'themes' : 'docs';
+                await saveAsset({ id, category: targetCat, name: file.name, fileType: 'css', rawText: text, subCategory: currentFolderOpened || '', createdAt: Date.now() });
+            } else if (ext === 'zip') {
+                const arrayBuffer = await file.arrayBuffer();
+                const targetCat = currentTab === 'themes' ? 'themes' : 'docs';
+                await saveAsset({ id, category: targetCat, name: file.name, fileType: 'zip', rawBuffer: arrayBuffer, subCategory: currentFolderOpened || '', createdAt: Date.now() });
             }
         }
 
@@ -1919,3 +1932,75 @@ async function deleteEntireFolder(folderName, itemCount) {
     }
 }
 window.deleteEntireFolder = deleteEntireFolder;
+
+
+        // ============================================================
+        // 🎨 美化 (Themes) 快捷代码粘贴保存 & ZIP / 文件导入引擎
+        // ============================================================
+        async function savePastedThemeCode() {
+            const titleInput = document.getElementById('themeTitleInput');
+            const codeInput = document.getElementById('themeCodeInput');
+            const title = titleInput?.value.trim() || `美化配置_${Date.now()}`;
+            const code = codeInput?.value.trim() || '';
+
+            if (!code) {
+                showToast('⚠️', '请先粘贴或输入 CSS/JSON 美化代码！');
+                return;
+            }
+
+            try {
+                const isJson = code.startsWith('{') || code.startsWith('[');
+                const fileType = isJson ? 'json' : 'css';
+                const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+
+                await saveAsset({
+                    id,
+                    category: 'themes',
+                    name: title,
+                    fileType: fileType,
+                    rawText: code,
+                    subCategory: currentFolderOpened || '',
+                    createdAt: Date.now()
+                });
+
+                if (titleInput) titleInput.value = '';
+                if (codeInput) codeInput.value = '';
+
+                allAssetsCache = null;
+                updateBadges();
+                await renderItems();
+                showToast('🎉', `美化代码 “${title}” 已成功保存！`);
+            } catch (err) {
+                console.error('Save theme code failed:', err);
+                showToast('❌', `保存美化代码失败：${err.message || err}`);
+            }
+        }
+
+        function triggerThemeFileInput() {
+            const fileEl = document.getElementById('themeFileInput');
+            if (fileEl) fileEl.click();
+        }
+
+        async function handleThemeFilesImport(e) {
+            const files = Array.from(e.target.files || []);
+            if (!files.length) return;
+
+            showToast('⌛', `正在导入 ${files.length} 个美化/文档文件...`);
+            try {
+                for (const file of files) {
+                    await processFile(file);
+                }
+                e.target.value = '';
+                allAssetsCache = null;
+                updateBadges();
+                await renderItems();
+                showToast('🎉', `成功导入 ${files.length} 个美化文件！`);
+            } catch (err) {
+                console.error('Theme files import failed:', err);
+                showToast('❌', `美化文件导入失败：${err.message || err}`);
+            }
+        }
+
+        window.savePastedThemeCode = savePastedThemeCode;
+        window.triggerThemeFileInput = triggerThemeFileInput;
+        window.handleThemeFilesImport = handleThemeFilesImport;
