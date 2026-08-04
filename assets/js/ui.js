@@ -792,8 +792,7 @@ if (fileIn) {
                 urlSaveBtn.addEventListener('click', saveGalleryUrl);
             }
         }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindGalleryUploadControls, {once:true});
-        else bindGalleryUploadControls();
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => { bindGalleryUploadControls(); if (typeof initCustomCss === 'function') initCustomCss(); }, {once:true}); } else { bindGalleryUploadControls(); if (typeof initCustomCss === 'function') initCustomCss(); }
 
         async function saveLocalGalleryPictures() {
             if (isGallerySaving) return; // 拦截二次重复保存

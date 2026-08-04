@@ -138,6 +138,39 @@
             </div>
 
             <!-- GitHub Sync Collapsible Section -->
+            
+            <!-- 🎨 外观美化与自定义 CSS 代码块 -->
+            <div class="bg-[#fcf5f7] border border-[#f5e1e3] rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <button onclick="toggleCustomCssCollapse()" class="text-xs font-bold text-[#b86b7a] flex items-center gap-1.5">
+                        <i data-lucide="palette" class="w-4 h-4 text-[#d88c9a]"></i>
+                        <span>🎨 外观美化与自定义 CSS</span>
+                        <i data-lucide="chevron-down" id="customCssChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                    </button>
+                    <span class="text-[9px] px-2 py-0.5 rounded-full bg-[#fdf4f5] text-[#b86b7a] font-semibold">可实时注入</span>
+                </div>
+
+                <div id="customCssBody" class="space-y-2.5 pt-1 hidden">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-[#8c7476] mb-1">一键快捷应用主题预设：</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="applyPresetTheme('sakura')" class="px-2 py-1 bg-white border border-[#f2dadc] text-[#b86b7a] rounded-lg text-[10px] font-bold hover:bg-[#fdf4f5] transition">🌸 暖粉和风</button>
+                            <button onclick="applyPresetTheme('dark')" class="px-2 py-1 bg-slate-800 text-slate-100 rounded-lg text-[10px] font-bold hover:bg-slate-700 transition">🌌 极夜暗黑</button>
+                            <button onclick="applyPresetTheme('morandi')" class="px-2 py-1 bg-[#e2eaf1] text-[#4a6572] rounded-lg text-[10px] font-bold hover:bg-[#cbd5e1] transition">🌊 莫兰迪蓝</button>
+                            <button onclick="applyPresetTheme('default')" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition">🔄 恢复默认</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">自定义 CSS 代码 (实时生效 & 云备份)：</label>
+                        <textarea id="userCustomCssInput" placeholder="在此粘贴你的自定义 CSS 代码... 例如:
+body { background: url('https://...') !important; }" class="w-full h-24 bg-white border border-[#f2e3e3] rounded-lg p-2 text-[10px] font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
+                    </div>
+                    <button onclick="saveAndApplyUserCustomCss()" class="w-full py-1.5 rounded-xl bg-[#d88c9a] text-white hover:bg-[#c97b8b] transition font-bold text-xs text-center shadow-xs">
+                        💾 保存并应用 CSS 样式
+                    </button>
+                </div>
+            </div>
+
             <div class="bg-[#f0f4f8] border border-[#d8e4f2] rounded-2xl p-3 space-y-2">
                 <div class="flex items-center justify-between">
                     <button onclick="toggleGithubConfigCollapse()" class="text-xs font-bold text-[#688ca6] flex items-center gap-1.5">

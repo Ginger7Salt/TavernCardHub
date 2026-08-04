@@ -103,8 +103,9 @@ lucide.createIcons();
                     try { fonts = await getAllFonts(); } catch(e){}
                 }
                 
+                const customCss = localStorage.getItem('TAVERN_CUSTOM_CSS') || '';
                 const backupPayload = {
-                    version: '3.0',
+                    version: '3.1',
                     timestamp: Date.now(),
                     totalAssets: localAssets.length,
                     totalKeys: apiKeys.length,
@@ -112,7 +113,8 @@ lucide.createIcons();
                     assets: localAssets,
                     apiKeys: apiKeys,
                     apiCategories: apiCategories,
-                    fonts: fonts
+                    fonts: fonts,
+                    customCss: customCss
                 };
                 const jsonString = JSON.stringify(backupPayload, null, 2);
                 
@@ -214,6 +216,12 @@ lucide.createIcons();
                     }
                     if (typeof renderApiKeyList === 'function') renderApiKeyList();
 
+                    // 恢复 自定义 CSS 样式
+                    if (parsedData.customCss) {
+                        localStorage.setItem('TAVERN_CUSTOM_CSS', parsedData.customCss);
+                        if (typeof initCustomCss === 'function') initCustomCss();
+                    }
+
                     // 2. 恢复 字体 (Fonts) 到 IndexedDB
                     let fontCount = 0;
                     if (parsedData.fonts && Array.isArray(parsedData.fonts) && typeof addFontItem === 'function') {
@@ -267,3 +275,81 @@ lucide.createIcons();
             initSupabaseClient();
             showToast('✅', 'Supabase 云端凭证已保存并连接！');
         }
+
+        // ============================================================
+        // 🎨 外观美化与自定义 CSS 代码动态注入模块
+        // ============================================================
+        let customCssCollapsed = true;
+
+        const PRESET_THEMES = {
+            default: '',
+            dark: `/* 🌌 极夜暗黑深空主题 */
+body { background-color: #0f172a !important; color: #f8fafc !important; }
+.bg-[#faf6f0] { background-color: #0f172a !important; }
+.bg-white { background-color: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
+.ui-card { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
+.text-[#4a3e3d], .text-[#5c494a], .text-[#3a3535] { color: #f1f5f9 !important; }
+.text-[#b86b7a], .text-[#d88c9a] { color: #38bdf8 !important; }
+.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] { background-color: #334155 !important; color: #38bdf8 !important; }
+.border-[#f2e3e3], .border-[#f2dadc] { border-color: #334155 !important; }
+input, textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }`,
+            morandi: `/* 🌊 莫兰迪灰蓝主题 */
+body { background-color: #f0f4f8 !important; }
+.bg-[#faf6f0] { background-color: #f0f4f8 !important; }
+.text-[#b86b7a], .text-[#d88c9a] { color: #5b7c99 !important; }
+.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] { background-color: #e2eaf1 !important; color: #4a6572 !important; }
+.border-[#f2e3e3], .border-[#f2dadc] { border-color: #cbd5e1 !important; }
+.ui-card:hover { border-color: #5b7c99 !important; }`,
+            sakura: `/* 🌸 暖粉和风纯美主题 */
+body { background-color: #fff8f8 !important; }
+.ui-card { border-color: #f7d6d8 !important; box-shadow: 0 4px 15px rgba(216, 140, 154, 0.08) !important; }
+.text-[#d88c9a] { color: #e06d88 !important; }`
+        };
+
+        function toggleCustomCssCollapse() {
+            customCssCollapsed = !customCssCollapsed;
+            const body = document.getElementById('customCssBody');
+            const chevron = document.getElementById('customCssChevron');
+            if (customCssCollapsed) { 
+                if (body) body.classList.add('hidden'); 
+                if (chevron) chevron.classList.remove('rotate-180'); 
+            } else { 
+                if (body) body.classList.remove('hidden'); 
+                if (chevron) chevron.classList.add('rotate-180'); 
+            }
+        }
+
+        function initCustomCss() {
+            const savedCss = localStorage.getItem('TAVERN_CUSTOM_CSS') || '';
+            let styleTag = document.getElementById('appCustomUserCss');
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'appCustomUserCss';
+                document.head.appendChild(styleTag);
+            }
+            styleTag.textContent = savedCss;
+            const inputEl = document.getElementById('userCustomCssInput');
+            if (inputEl) inputEl.value = savedCss;
+        }
+
+        function saveAndApplyUserCustomCss() {
+            const inputEl = document.getElementById('userCustomCssInput');
+            const css = inputEl ? inputEl.value : '';
+            localStorage.setItem('TAVERN_CUSTOM_CSS', css);
+            initCustomCss();
+            showToast('🎨', '自定义 CSS 样式已保存并立即生效！');
+        }
+
+        function applyPresetTheme(themeKey) {
+            const css = PRESET_THEMES[themeKey] || '';
+            const inputEl = document.getElementById('userCustomCssInput');
+            if (inputEl) inputEl.value = css;
+            localStorage.setItem('TAVERN_CUSTOM_CSS', css);
+            initCustomCss();
+            showToast('✨', '主题预设已应用！');
+        }
+
+        window.toggleCustomCssCollapse = toggleCustomCssCollapse;
+        window.saveAndApplyUserCustomCss = saveAndApplyUserCustomCss;
+        window.applyPresetTheme = applyPresetTheme;
+        window.initCustomCss = initCustomCss;
