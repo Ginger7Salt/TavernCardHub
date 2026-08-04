@@ -997,7 +997,7 @@ if (fileIn) {
 
             
             // Category/Folder First View (Except emojis and fonts)
-            if (currentTab !== 'emojis' && currentTab !== 'fonts' && currentTab !== 'links' && !isCustomCategoryTab(currentTab)) {
+            if (currentTab !== 'emojis' && currentTab !== 'fonts' && !isCustomCategoryTab(currentTab)) {
                 if (!currentFolderOpened && !keyword) {
                     // Group by subCategory & Include empty custom folders
                     const folderCounts = {};
@@ -1034,7 +1034,7 @@ if (fileIn) {
                     Object.keys(folderCounts).forEach(fName => {
                         const cnt = folderCounts[fName];
                         const fCard = document.createElement('div');
-                        fCard.className = "ui-card p-3 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] bg-white relative group min-h-[130px] select-none";
+                        fCard.className = "px-3 py-1.5 rounded-full border border-[#f5e1e3] text-[#b86b7a] bg-white hover:border-[#b86b7a] flex items-center gap-2 cursor-pointer shadow-sm transition active:scale-95 relative select-none";
                         
                         let folderLongPressTimer = null;
                         let isFolderLongPress = false;
