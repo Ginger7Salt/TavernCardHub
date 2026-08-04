@@ -1276,11 +1276,11 @@ if (fileIn) {
                         <!-- 下载与删除双大按钮区 -->
                         <div class="grid grid-cols-2 gap-2.5 pt-1">
                             ${item.rawBuffer ? `
-                                <button type="button" onclick="downloadThemeBufferAsset()" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                <button type="button" onclick="const cName = currentItem.name.replace(/\.(json|css|txt|zip|docx|png)$/i, '').trim() || '美化资产'; downloadBuffer(currentItem.rawBuffer, cName + '.' + (currentItem.fileType || 'zip'), 'application/zip');" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
                                     📥 下载文件
                                 </button>
                             ` : `
-                                <button type="button" onclick="downloadThemeTextAsset()" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                <button type="button" onclick="const cName = currentItem.name.replace(/\.(json|css|txt|zip|docx|png)$/i, '').trim() || '美化资产'; downloadText(currentItem.rawText || '', cName + '.' + (currentItem.fileType || 'json'), 'application/json');" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
                                     📥 下载美化文件
                                 </button>
                             `}
