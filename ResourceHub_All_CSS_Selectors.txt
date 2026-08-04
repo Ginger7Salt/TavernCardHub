@@ -1,0 +1,118 @@
+/* ============================================================
+   🎨 资源合集 (ResourceHub / TavernCardHub) 全量 CSS 选择器手册
+   可在侧边栏 “🎨 外观美化与自定义 CSS” 输入框里直接粘贴与修改
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. 全局与背景 (Global & Background)
+   ------------------------------------------------------------ */
+/* 全局背景图 / 渐变色 */
+body {
+    background: linear-gradient(135deg, #fef4f6 0%, #f5e1e4 50%, #edd3d8 100%) fixed !important;
+}
+
+/* 中间主工作区背景 (设为 transparent 可完全透出底层背景) */
+main, .bg-\[\#faf6f0\], .bg-white\/50 {
+    background: transparent !important;
+}
+
+
+/* ------------------------------------------------------------
+   2. 左侧边栏 (Sidebar Aside)
+   ------------------------------------------------------------ */
+/* 左侧边栏整体 (毛玻璃) */
+aside {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 侧边栏所有分类按钮 (角色卡/世界书/图库/API密钥等) */
+aside nav button {
+    color: #4a3e3d !important;
+}
+
+/* 分类按钮图标与右侧数量数字 */
+aside nav button i, 
+aside nav button span {
+    color: #8c7476 !important;
+}
+
+
+/* ------------------------------------------------------------
+   3. 顶部搜索栏 (Top Bar & Search)
+   ------------------------------------------------------------ */
+/* 顶部搜索框区域整体 */
+header, .p-3.bg-white, .bg-white {
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 搜索输入框 */
+input#searchInput, 
+input[type="text"], 
+textarea {
+    background: rgba(255, 255, 255, 0.6) !important;
+    color: #4a3e3d !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+}
+
+
+/* ------------------------------------------------------------
+   4. 所有粉色按钮与高亮胶囊 (Pink Buttons & Badges)
+   ------------------------------------------------------------ */
+/* 右上角 “导入文件” 按钮 */
+label[for="fileInput"], 
+header label.cursor-pointer,
+.bg-\[\#d88c9a\] {
+    background-color: #d88c9a !important;
+    color: #ffffff !important;
+}
+
+/* 侧边栏 “保存并应用 CSS 样式” 大按钮 */
+button[onclick*="saveAndApplyUserCustomCss"] {
+    background-color: #d88c9a !important;
+    color: #ffffff !important;
+}
+
+/* 浅粉胶囊标签 (如 “可实时注入”、文件夹卡片 “3 项” 标签) */
+.bg-\[\#fdf6f7\], 
+.bg-\[\#fdf4f5\], 
+.bg-\[\#f8eeee\] {
+    background: rgba(248, 238, 238, 0.65) !important;
+    color: #b86b7a !important;
+}
+
+/* 界面所有的粉色文字与粉色图标 */
+.text-\[\#b86b7a\], 
+.text-\[\#d88c9a\] {
+    color: #b86b7a !important;
+}
+
+
+/* ------------------------------------------------------------
+   5. 文件夹卡片与资产卡片 (Folder & Asset Cards)
+   ------------------------------------------------------------ */
+/* 所有文件夹与卡片整体 (毛玻璃) */
+.ui-card {
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    border-radius: 18px !important;
+}
+
+/* 悬浮 (Hover) 时的卡片边框与阴影 */
+.ui-card:hover {
+    background: rgba(255, 255, 255, 0.68) !important;
+    border-color: rgba(216, 140, 154, 0.5) !important;
+    box-shadow: 0 10px 30px rgba(216, 140, 154, 0.22) !important;
+}
+
+/* 文件夹标题文案 */
+.ui-card h3 {
+    color: #3a3535 !important;
+}
