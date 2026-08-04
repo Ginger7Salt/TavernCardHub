@@ -1459,12 +1459,36 @@ if (fileIn) {
             lucide.createIcons();
         }
 
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
         function downloadText(text, filename, mimeType) {
+            if (window.AndroidApp && typeof window.AndroidApp.saveBase64File === 'function') {
+                try {
+                    const base64 = window.btoa(unescape(encodeURIComponent(text)));
+                    window.AndroidApp.saveBase64File(base64, filename, mimeType || 'text/plain');
+                    return;
+                } catch(e) { console.error('Android bridge text save failed', e); }
+            }
             const blob = new Blob([text], { type: `${mimeType};charset=utf-8` }), url = URL.createObjectURL(blob), a = document.createElement('a');
             a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
         }
 
         function downloadBuffer(buffer, filename, mimeType) {
+            if (window.AndroidApp && typeof window.AndroidApp.saveBase64File === 'function') {
+                try {
+                    const base64 = arrayBufferToBase64(buffer);
+                    window.AndroidApp.saveBase64File(base64, filename, mimeType || 'application/zip');
+                    return;
+                } catch(e) { console.error('Android bridge buffer save failed', e); }
+            }
             const blob = new Blob([buffer], { type: mimeType }), url = URL.createObjectURL(blob), a = document.createElement('a');
             a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
         }
