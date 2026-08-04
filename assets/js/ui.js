@@ -847,16 +847,40 @@ if (fileIn) {
             }
         }
 
+        let isGalleryUrlSaving = false;
         async function saveGalleryUrl() {
-            const urlInput=document.getElementById('galleryUrlInput');
-            const titleInput=document.getElementById('galleryTitleInput');
-            const url=urlInput?.value.trim()||'';
-            if (!/^https?:\/\//i.test(url)) { showToast('⚠️','请填写有效的图片链接'); return; }
+            if (isGalleryUrlSaving) return; // 防抖锁拦截重复保存
+            const urlInput = document.getElementById('galleryUrlInput');
+            const titleInput = document.getElementById('galleryTitleInput');
+            const url = urlInput?.value.trim() || '';
+            if (!/^https?:\/\//i.test(url)) { showToast('⚠️', '请填写有效的图片链接'); return; }
+            
+            isGalleryUrlSaving = true;
             try {
-                await saveAsset({id:'asset_'+Date.now()+'_'+Math.random().toString(36).slice(2), category:'gallery', name:titleInput?.value.trim()||'网络图片', fileType:'img', rawText:url, subCategory:currentFolderOpened||'', createdAt:Date.now()});
-                if (urlInput) urlInput.value=''; if (titleInput) titleInput.value='';
-                allAssetsCache=null; updateBadges(); await renderItems(); showToast('🎉','网络图片链接已保存');
-            } catch (err) { console.error('url gallery save failed', err); showToast('❌', `网络链接保存失败：${err.message||err}`); }
+                if (urlInput) urlInput.value = ''; // 立即清空输入框，切断再次提取数据源
+                const nameText = titleInput?.value.trim() || '网络图片';
+                if (titleInput) titleInput.value = '';
+
+                await saveAsset({
+                    id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2), 
+                    category: 'gallery', 
+                    name: nameText, 
+                    fileType: 'img', 
+                    rawText: url, 
+                    subCategory: currentFolderOpened || '', 
+                    createdAt: Date.now()
+                });
+
+                allAssetsCache = null; 
+                updateBadges(); 
+                await renderItems(); 
+                showToast('🎉', '网络图片链接已保存');
+            } catch (err) { 
+                console.error('url gallery save failed', err); 
+                showToast('❌', `网络链接保存失败：${err.message || err}`); 
+            } finally {
+                isGalleryUrlSaving = false;
+            }
         }
         async function renderItems() {
     renderDocDrawerImportUI();
