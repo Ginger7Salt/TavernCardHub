@@ -370,8 +370,7 @@ input, textarea {
 
         function initCustomCss() {
             let savedCss = localStorage.getItem('TAVERN_CUSTOM_CSS');
-            // 如果旧 CSS 没包含指定的网易云图片背景，自动升级换装为最新的水蓝琉璃外观
-            if (savedCss === null || !savedCss.includes('b3d01ac6da613cbd6e61b56d7dfadb3f.png')) {
+            if (savedCss === null) {
                 savedCss = DEFAULT_GLASS_CSS;
                 localStorage.setItem('TAVERN_CUSTOM_CSS', savedCss);
             }
