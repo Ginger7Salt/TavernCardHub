@@ -281,61 +281,58 @@ lucide.createIcons();
         // ============================================================
         let customCssCollapsed = true;
 
-                const PRESET_THEMES = {
+                        const PRESET_THEMES = {
             default: '',
-            morandi_pink: `/* 🌸 莫兰迪暖粉手账 */
+            full_glass: `/* ✨ 梦幻全景通透毛玻璃 */
 body {
-    background: linear-gradient(135deg, #fbf2f4 0%, #f7e8ea 50%, #f5e3e6 100%) fixed !important;
+    background: linear-gradient(135deg, #fef4f6 0%, #f5e1e4 50%, #edd3d8 100%) fixed !important;
 }
-.bg-[#faf6f0], main { background: transparent !important; }
-.bg-white {
-    background: rgba(255, 255, 255, 0.75) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(216, 140, 154, 0.25) !important;
-    box-shadow: 0 8px 30px rgba(216, 140, 154, 0.08) !important;
+body, main, header, div, section, article {
+    background-color: transparent !important;
 }
+.bg-[#faf6f0], .bg-white\/50, main { 
+    background: transparent !important; 
+}
+/* 侧边栏全面毛玻璃 */
+aside {
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+/* 搜索顶栏全面毛玻璃 */
+.p-3.bg-white, .bg-white {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 8px 32px rgba(216, 140, 154, 0.08) !important;
+}
+/* 所有文件夹卡片、资产卡片 100% 极清透光毛玻璃 */
 .ui-card {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(216, 140, 154, 0.3) !important;
-    box-shadow: 0 4px 15px rgba(216, 140, 154, 0.06) !important;
-    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 4px 20px rgba(216, 140, 154, 0.1) !important;
+    border-radius: 18px !important;
 }
 .ui-card:hover {
-    border-color: #d88c9a !important;
-    box-shadow: 0 6px 20px rgba(216, 140, 154, 0.15) !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    border-color: rgba(216, 140, 154, 0.5) !important;
+    box-shadow: 0 10px 30px rgba(216, 140, 154, 0.22) !important;
 }
-.text-[#b86b7a], .text-[#d88c9a] { color: #c97b8b !important; }
+/* 输入框与弹窗毛玻璃 */
+input, textarea, select {
+    background: rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+}
 .bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
-    background: rgba(248, 238, 238, 0.85) !important;
+    background: rgba(248, 238, 238, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
     color: #b86b7a !important;
-}`,
-            morandi_blue: `/* 🌊 莫兰迪海蓝清晨 */
-body {
-    background: linear-gradient(135deg, #f0f4f8 0%, #e2eaf1 100%) fixed !important;
-}
-.bg-[#faf6f0], main { background: transparent !important; }
-.bg-white, .ui-card {
-    background: rgba(255, 255, 255, 0.75) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(148, 163, 184, 0.3) !important;
-}
-.text-[#b86b7a], .text-[#d88c9a] { color: #5b7c99 !important; }
-.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
-    background: rgba(226, 234, 241, 0.85) !important;
-    color: #4a6572 !important;
-}`,
-            pearl_white: `/* 🍃 极简 Ins 珍珠透光 */
-body {
-    background: #fcfbfa !important;
-}
-.ui-card {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid #f0eae5 !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
 }`
         };
 
