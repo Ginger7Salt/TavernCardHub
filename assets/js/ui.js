@@ -1128,6 +1128,8 @@ if (fileIn) {
                 card.onclick = (e) => {
                     if (isMultiSelectMode) {
                         toggleSelectAsset(item.id, e);
+                    } else if (currentTab === 'links' || item.category === 'links') {
+                        openLinkDetailModal(item);
                     } else {
                         openDetailView(item);
                     }
@@ -1355,6 +1357,7 @@ if (fileIn) {
             }
 
             if (item.category === 'emojis') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('emoji-grid');
                 selectedEmojiPackItems.clear();
                 if (item.emojiList) item.emojiList.forEach(em => selectedEmojiPackItems.add(em.id));
