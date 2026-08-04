@@ -280,80 +280,57 @@ lucide.createIcons();
         // ✨ 全景晶莹毛玻璃 (Full Glassmorphism) 默认加载引擎
         // ============================================================
         let customCssCollapsed = true;
-                const DEFAULT_GLASS_CSS = `/* 🌊 水蓝琉璃 · Aqua Glass 终极全景覆盖版 CSS */
-html, body {
-    background: url('https://nos.netease.com/ysf/b3d01ac6da613cbd6e61b56d7dfadb3f.png') center center / cover no-repeat fixed !important;
-    min-height: 100vh !important;
+        const DEFAULT_GLASS_CSS = `/* ✨ 全景晶莹透光毛玻璃 (Full Glassmorphism) */
+body {
+    background: linear-gradient(135deg, #fef4f6 0%, #f5e1e4 50%, #edd3d8 100%) fixed !important;
 }
-
-/* 清除所有阻挡背景透光的实色遮罩 */
-#app, main, #listView, #detailView, #secondaryPillsBar, .bg-\[\#faf6f0\], .bg-white\/50, .bg-\[\#fdf6f7\], div[class*="bg-\[\#faf6f0\]"] {
-    background: transparent !important;
+body, main, header, div, section, article {
+    background-color: transparent !important;
 }
-
-/* 侧边栏与卡片全员 22px 强力水蓝毛玻璃 */
-.ui-card, 
-aside, 
-#sidebarDrawer, 
-header,
-.p-3.bg-white,
-.bg-white,
-.ui-card.p-3,
-.ui-card.p-4 {
-    background: rgba(224, 242, 254, 0.48) !important;
-    backdrop-filter: blur(22px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
-    border: 1px solid rgba(186, 230, 253, 0.75) !important;
-    box-shadow: 0 8px 32px 0 rgba(14, 165, 233, 0.15) !important;
-    border-radius: 20px !important;
+.bg-[#faf6f0], .bg-white\/50, main { 
+    background: transparent !important; 
 }
-
-/* 全员文字与图标多重蓝色覆盖 */
-h1, h2, h3, h4, .font-bold, .text-\[\#4a3e3d\], .text-\[\#5c494a\] {
-    color: #032b53 !important;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+/* 侧边栏 20px 级极清毛玻璃 */
+aside {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
 }
-
-p, span, label, div, .text-\[\#8c7173\], .text-\[\#785e60\], .text-\[\#b86b7a\], .text-\[\#a38b8d\] {
-    color: #0284c7 !important;
+/* 搜索顶栏毛玻璃 */
+.p-3.bg-white, .bg-white {
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 8px 32px rgba(216, 140, 154, 0.08) !important;
 }
-
-/* 图标全员换装蓝色 */
-i, svg, [data-lucide] {
-    color: #0284c7 !important;
-    stroke: #0284c7 !important;
+/* 所有文件夹卡片、资产卡片 100% 极清透光毛玻璃 */
+.ui-card {
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    box-shadow: 0 4px 20px rgba(216, 140, 154, 0.1) !important;
+    border-radius: 18px !important;
 }
-
-/* 主要按钮：渐变水蓝 */
-button.bg-\[\#d88c9a\], 
-.bg-\[\#d88c9a\],
-button.bg-gradient-to-r,
-button[onclick*="save"],
-button[onclick*="apply"] {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+.ui-card:hover {
+    background: rgba(255, 255, 255, 0.68) !important;
+    border-color: rgba(216, 140, 154, 0.5) !important;
+    box-shadow: 0 10px 30px rgba(216, 140, 154, 0.22) !important;
 }
-
-/* 次要按钮：半透冰晶水蓝 */
-button.bg-\[\#f8eeee\], 
-.bg-\[\#f8eeee\],
-button.bg-\[\#fdf4f5\],
-button[onclick*="rename"] {
-    background: rgba(186, 230, 253, 0.65) !important;
-    color: #0284c7 !important;
-    border: 1px solid rgba(125, 211, 252, 0.8) !important;
+/* 输入框与弹窗毛玻璃 */
+input, textarea, select {
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
 }
-
-/* 输入框水蓝 */
-input, textarea {
-    background: rgba(255, 255, 255, 0.75) !important;
-    border: 1px solid rgba(125, 211, 252, 0.7) !important;
-    color: #075985 !important;
-    border-radius: 14px !important;
-}
-`;
+.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
+    background: rgba(248, 238, 238, 0.65) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #b86b7a !important;
+}`;
 
         function toggleCustomCssCollapse() {
             customCssCollapsed = !customCssCollapsed;
