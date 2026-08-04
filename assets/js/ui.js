@@ -2164,3 +2164,24 @@ window.deleteEntireFolder = deleteEntireFolder;
         window.downloadThemeBufferAsset = downloadThemeBufferAsset;
         window.downloadThemeTextAsset = downloadThemeTextAsset;
         window.getCleanAssetFilename = getCleanAssetFilename;
+
+window.getCleanAssetFilename = function(item) {
+    if (!item) return 'theme_file.json';
+    const ext = item.fileType || 'json';
+    const cleanName = item.name.replace(/\.(json|css|txt|zip|docx|png)$/i, '').trim() || '美化资产';
+    return `${cleanName}.${ext}`;
+};
+
+window.downloadThemeBufferAsset = function() {
+    if (!currentItem) return;
+    const filename = window.getCleanAssetFilename(currentItem);
+    const mime = currentItem.fileType === 'zip' ? 'application/zip' : 'application/octet-stream';
+    downloadBuffer(currentItem.rawBuffer, filename, mime);
+};
+
+window.downloadThemeTextAsset = function() {
+    if (!currentItem) return;
+    const filename = window.getCleanAssetFilename(currentItem);
+    const mime = currentItem.fileType === 'json' ? 'application/json' : 'text/css';
+    downloadText(currentItem.rawText || '', filename, mime);
+};
