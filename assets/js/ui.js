@@ -18,6 +18,7 @@ function formatFileSize(bytes) {
 function switchTab(tab, e) {
     currentTab = tab;
     if (typeof currentFolderOpened !== 'undefined') currentFolderOpened = null;
+    setTimeout(ensureCategoryImportUI, 0);
     closeDetailView();
     if (e && e.stopPropagation) e.stopPropagation();
     if (e && e.preventDefault) e.preventDefault();
@@ -34,6 +35,7 @@ function switchTab(tab, e) {
     const extrasPanel = document.getElementById('extrasBuilderPanel');
     const themePanel = document.getElementById('themeBuilderPanel');
     const emojiPanel = document.getElementById('emojiExportBuilderPanel');
+    const linksPanel = document.getElementById('linksBuilderPanel');
     const itemsGrid = document.getElementById('itemsContainer');
     const searchBar = document.getElementById('searchInput')?.parentElement?.parentElement;
     
@@ -42,6 +44,7 @@ function switchTab(tab, e) {
     if (extrasPanel) extrasPanel.classList.add('hidden');
     if (themePanel) themePanel.classList.add('hidden');
     if (emojiPanel) emojiPanel.classList.add('hidden');
+    if (linksPanel) linksPanel.classList.add('hidden');
     if (itemsGrid) itemsGrid.classList.remove('hidden');
     if (searchBar) searchBar.classList.remove('hidden');
 
@@ -67,11 +70,15 @@ function switchTab(tab, e) {
     } else if (tab === 'themes') {
         if (themePanel) themePanel.classList.remove('hidden');
         renderItems();
+    } else if (tab === 'links') {
+        if (linksPanel) linksPanel.classList.remove('hidden');
+        renderItems();
     } else {
         renderItems();
     }
     // 最后关闭 sidebar,确保点击事件不再冒泡到 overlay
     if (typeof toggleSidebar === 'function') toggleSidebar();
+    setTimeout(ensureCategoryImportUI, 0);
 }
 
         // Setup Global Paste Listener for Emojis
@@ -120,7 +127,7 @@ if (fileIn) {
     fileIn.addEventListener('change', async (e) => {
         try {
             const files = Array.from(e.target.files || []);
-            for (const file of files) await processFile(file);
+            for (const file of files) await processFile(file, 'themes');
             allAssetsCache = null;
             updateBadges();
             await renderItems();
@@ -133,84 +140,76 @@ if (fileIn) {
     });
 }
 
-        async function processFile(file) {
-            const ext = file.name.split('.').pop().toLowerCase(), id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            if (ext === 'png') {
-                const arrayBuffer = await file.arrayBuffer(), jsonText = extractCharaChunk(arrayBuffer);
-                let cardData = {}; if (jsonText) { try { cardData = JSON.parse(jsonText); } catch(err){} }
-                const dataObj = cardData.data || cardData;
-                const extractedTags = extractTagsFromData(dataObj);
-                const asset = { id, category: 'cards', name: dataObj.name || file.name.replace('.png', ''), fileType: 'png', rawBuffer: arrayBuffer, cardData, tags: extractedTags, firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(cardData), worldbook: dataObj.character_book || null, regexScripts: dataObj.extensions?.regex_scripts || null, rawText: JSON.stringify(cardData, null, 2), createdAt: Date.now() };
-                await saveAsset(asset);
-            } else if (ext === 'json') {
-                const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
-                
-                // 如果当前处于“美化”分类，优先锁定入库到美化 (themes) 仓库！
-                if (currentTab === 'themes') {
-                    await saveAsset({
-                        id,
-                        category: 'themes',
-                        name: file.name.replace(/(\.(json|css|txt|zip|docx|png))+$/gi, ''),
-                        fileType: 'json',
-                        cardData: json,
-                        rawText: text,
-                        subCategory: currentFolderOpened || '',
-                        createdAt: Date.now()
-                    });
-                    return;
-                }
-
-                let category = 'cards', name = file.name.replace(/\.json$/i, ''), dataObj = json.data || json;
-                
-                let wbObj = null;
-                if (json.entries && (Array.isArray(json.entries) || typeof json.entries === 'object')) {
-                    category = 'worldbooks';
-                    name = json.name || name;
-                    wbObj = json;
-                } else if (json.character_book) {
-                    category = 'worldbooks';
-                    name = json.name || json.character_book.name || name;
-                    wbObj = json.character_book;
-                } else if (Array.isArray(json) && json[0]?.scriptName) {
-                    category = 'regex';
-                } else if (dataObj.name) {
-                    category = 'cards';
-                    name = dataObj.name;
-                    wbObj = dataObj.character_book || null;
-                } else if (json.scenario || json.prompt) {
-                    category = 'scenarios';
-                }
-
-                if (wbObj && wbObj.entries && !Array.isArray(wbObj.entries) && typeof wbObj.entries === 'object') {
-                    wbObj.entries = Object.values(wbObj.entries);
-                }
-
-                const extractedTags = extractTagsFromData(dataObj || json);
-                const asset = { id, category, name, fileType: 'json', cardData: json, tags: extractedTags, rawText: text, createdAt: Date.now(), subCategory: currentFolderOpened || '', firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
-                await saveAsset(asset);
-            } else if (ext === 'txt') {
-                const text = await file.text();
-                const emojiParsed = parseEmojiTextLines(text);
-                if (emojiParsed.length > 0 && currentTab === 'emojis') {
-                    const packName = file.name.replace('.txt', '');
-                    await saveAsset({ id, category: 'emojis', name: packName, fileType: 'json', emojiList: emojiParsed, rawText: text, createdAt: Date.now() });
-                } else {
-                    await saveAsset({ id, category: 'docs', name: file.name, fileType: 'txt', rawText: text, createdAt: Date.now() });
-                }
-            } else if (ext === 'docx') {
-                const arrayBuffer = await file.arrayBuffer(), result = await mammoth.extractRawText({ arrayBuffer });
-                await saveAsset({ id, category: 'docs', name: file.name, fileType: 'docx', rawText: result.value, rawBuffer: arrayBuffer, createdAt: Date.now() });
-            } else if (ext === 'css') {
-                const text = await file.text();
-                const targetCat = currentTab === 'themes' ? 'themes' : 'docs';
-                await saveAsset({ id, category: targetCat, name: file.name.replace(/(\.(json|css|txt|zip|docx|png))+$/gi, ''), fileType: 'css', rawText: text, subCategory: currentFolderOpened || '', createdAt: Date.now() });
-            } else if (ext === 'zip') {
-                const arrayBuffer = await file.arrayBuffer();
-                const targetCat = currentTab === 'themes' ? 'themes' : 'docs';
-                await saveAsset({ id, category: targetCat, name: file.name.replace(/(\.(json|css|txt|zip|docx|png))+$/gi, ''), fileType: 'zip', rawBuffer: arrayBuffer, subCategory: currentFolderOpened || '', createdAt: Date.now() });
-            }
+        function isCustomCategoryTab(tab) { return typeof tab === 'string' && tab.indexOf('custom:') === 0; }
+        function categoryStorageKey(tab) { return isCustomCategoryTab(tab) ? tab : tab; }
+        function cleanImportName(name) { return name.replace(/(\.(json|css|txt|zip|docx|png))+$/gi, '').trim() || '未命名文件'; }
+        function toggleCategoryImportPanel(){ const b=document.getElementById('categoryImportBody'); const c=document.getElementById('categoryImportChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+        window.toggleCategoryImportPanel=toggleCategoryImportPanel;
+        function ensureCategoryImportUI() {
+            const list=document.getElementById('listView'); if (!list) return;
+            let box=document.getElementById('categoryImportBox');
+            if (!box) { box=document.createElement('div'); box.id='categoryImportBox'; box.className='mb-3'; list.insertBefore(box,list.firstChild); }
+            const tab=currentTab;
+            const disabled=['fonts','apikeys','links'];
+            if (disabled.includes(tab)) { box.innerHTML=''; box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            const labels={cards:'角色卡',worldbooks:'世界书',emojis:'表情包',regex:'正则/脚本',docs:'文档',gallery:'图库',themes:'美化包'};
+            const label=isCustomCategoryTab(tab) ? (customCategoryList.find(x=>x.id===tab)?.name || '自定义分类') : (labels[tab]||'当前分类');
+            box.innerHTML=`<div class="ui-card border border-[#dbeafe] bg-white/70 overflow-hidden"><button type="button" onclick="toggleCategoryImportPanel()" class="w-full px-3 py-2 flex items-center justify-between gap-2 text-left"><span class="text-xs font-bold text-[#2563eb]">📥 导入到「${label}」</span><span id="categoryImportChevron" class="text-[#60a5fa] text-xs">⌄</span></button><div id="categoryImportBody" class="hidden px-3 pb-3"><label class="inline-flex cursor-pointer px-3 py-1.5 rounded-lg bg-[#eff6ff] text-[#2563eb] text-xs font-bold">选择文件<input id="categoryFileInput" data-target-category="${tab}" type="file" multiple accept="*/*" class="hidden"></label><span class="ml-2 text-[10px] text-[#64748b]">支持任意文件格式</span></div></div>`;
+            const input=document.getElementById('categoryFileInput');
+            input.onchange=async e=>{ const lockedTarget=input.dataset.targetCategory || tab; try { for(const f of Array.from(e.target.files||[])) await processFile(f,lockedTarget); allAssetsCache=null; updateBadges(); await renderItems(); showToast('✅','文件已保存到当前分类'); } catch(err){ console.error(err); showToast('❌','导入失败，请检查文件格式'); } finally { input.value=''; } };
         }
 
+        async function processFile(file, targetCategory = currentTab) {
+            const ext=file.name.split('.').pop().toLowerCase();
+            const id='asset_'+Date.now()+'_'+Math.random().toString(36).slice(2,11);
+            const category=categoryStorageKey(targetCategory);
+            if (isCustomCategoryTab(category)) {
+                const raw=await file.arrayBuffer();
+                let preview='';
+                const textExts=['txt','css','json','html','htm','js','ts','xml','md','yaml','yml','csv','ini','log'];
+                if (textExts.includes(ext)) { try { preview=await file.text(); } catch(e) { preview=''; } }
+                await saveAsset({id, category, name:file.name, fileType:ext || 'bin', rawBuffer:raw, byteSize:raw.byteLength, rawText:preview, createdAt:Date.now()});
+                return;
+            }
+            if (ext==='png') {
+                if (category!=='cards') throw new Error('PNG 只能导入角色卡分类');
+                const raw=await file.arrayBuffer(); let cardData={}; const chunk=extractCharaChunk(raw);
+                if(chunk) { try { cardData=JSON.parse(chunk); } catch(e){} }
+                const d=cardData.data||cardData;
+                await saveAsset({id,category:'cards',name:d.name||cleanImportName(file.name),fileType:'png',rawBuffer:raw,cardData,tags:extractTagsFromData(d),firstMes:d.first_mes||'',alternateGreetings:d.alternate_greetings||[],personality:extractPersonalityDeep(cardData),worldbook:d.character_book||null,regexScripts:d.extensions?.regex_scripts||null,rawText:JSON.stringify(cardData,null,2),createdAt:Date.now()});
+                return;
+            }
+            if (ext==='json') {
+                const text=await file.text(); let json={}; try { json=JSON.parse(text); } catch(e){}
+                if (category==='cards') {
+                    const d=json.data||json; await saveAsset({id,category:'cards',name:d.name||cleanImportName(file.name),fileType:'json',cardData:json,tags:extractTagsFromData(d),rawText:text,personality:extractPersonalityDeep(json),worldbook:d.character_book||null,createdAt:Date.now()});
+                } else if (category==='worldbooks') {
+                    await saveAsset({id,category:'worldbooks',name:json.name||cleanImportName(file.name),fileType:'json',cardData:json,worldbook:json,rawText:text,createdAt:Date.now()});
+                } else {
+                    await saveAsset({id,category,name:cleanImportName(file.name),fileType:'json',cardData:json,rawText:text,createdAt:Date.now()});
+                }
+                return;
+            }
+            if (ext==='txt' || ext==='css') {
+                const text=await file.text();
+                if (category==='emojis') {
+                    const parsed=parseEmojiTextLines(text); if(!parsed.length) throw new Error('没有识别到表情链接');
+                    await saveAsset({id,category:'emojis',name:cleanImportName(file.name),fileType:'json',emojiList:parsed,rawText:text,createdAt:Date.now()});
+                } else {
+                    await saveAsset({id,category,name:cleanImportName(file.name),fileType:ext,rawText:text,createdAt:Date.now()});
+                }
+                return;
+            }
+            if (ext==='docx') {
+                const raw=await file.arrayBuffer(); const result=await mammoth.extractRawText({arrayBuffer:raw});
+                await saveAsset({id,category,name:cleanImportName(file.name),fileType:'docx',rawText:result.value,rawBuffer:raw,createdAt:Date.now()}); return;
+            }
+            if (ext==='zip') {
+                const raw=await file.arrayBuffer(); await saveAsset({id,category,name:cleanImportName(file.name),fileType:'zip',rawBuffer:raw,createdAt:Date.now()}); return;
+            }
+            throw new Error('不支持的文件格式');
+        }
         function parseEmojiTextLines(text) {
             const lines = text.split(/\r?\n/);
             const results = [];
@@ -482,9 +481,10 @@ if (fileIn) {
         }
 
         async function updateBadges() {
-            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0, gallery: 0 };
+            const assets = await getAllAssets(), counts = { cards: 0, worldbooks: 0, emojis: 0, regex: 0, docs: 0, gallery: 0, themes: 0, links: 0 };
             assets.forEach(a => { if (counts[a.category] !== undefined) counts[a.category]++; });
             for (let cat in counts) { const el = document.getElementById(`badge-${cat}`); if (el) el.innerText = counts[cat]; }
+            const lh=document.getElementById('linksCountHint'); if(lh) lh.innerText=counts.links+' 条链接';
         }
 
         // Emoji Builder
@@ -748,7 +748,7 @@ if (fileIn) {
             container.innerHTML = '';
 
             const assets = await getAllAssets();
-            const categoryAssets = assets.filter(a => a.category === currentTab);
+            const categoryAssets = assets.filter(a => a.category === categoryStorageKey(currentTab));
             
             const tagSet = new Set();
             categoryAssets.forEach(a => {
@@ -962,7 +962,7 @@ if (fileIn) {
             }
 
             const filtered = assets.filter(a => {
-                if (a.category !== currentTab) return false;
+                if (a.category !== categoryStorageKey(currentTab)) return false;
 
                 // Tag Filter
                 if (currentSelectedTagFilter !== 'ALL') {
@@ -997,7 +997,7 @@ if (fileIn) {
 
             
             // Category/Folder First View (Except emojis and fonts)
-            if (currentTab !== 'emojis' && currentTab !== 'fonts') {
+            if (currentTab !== 'emojis' && currentTab !== 'fonts' && currentTab !== 'links' && !isCustomCategoryTab(currentTab)) {
                 if (!currentFolderOpened && !keyword) {
                     // Group by subCategory & Include empty custom folders
                     const folderCounts = {};
@@ -1133,7 +1133,35 @@ if (fileIn) {
                     }
                 };
 
-                if (currentTab === 'gallery') {
+                if (currentTab === 'links') {
+                    const linkUrl = item.url || item.rawText || '#';
+                    card.className = "ui-card col-span-full w-full p-4 flex flex-col gap-3 hover:border-[#60a5fa] transition relative group bg-white/75 rounded-2xl border border-white/80 shadow-sm backdrop-blur-md";
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-2xl bg-[#e0f2fe]/80 border border-[#93c5fd] flex items-center justify-center shrink-0">
+                                    <i data-lucide="link" class="w-4 h-4 text-[#2563eb]"></i>
+                                </div>
+                                <div class="truncate">
+                                    <h3 class="font-bold text-sm text-[#172554] truncate">${item.name}</h3>
+                                    <span class="text-[11px] text-[#64748b] font-mono block truncate mt-0.5">${linkUrl}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-[#dbeafe]">
+                            <button onclick="openLinkInDefaultBrowser('${linkUrl}')" class="flex-1 min-w-[150px] py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-[11px] transition shadow-xs flex items-center justify-center gap-1">
+                                🚀 默认浏览器打开
+                            </button>
+                            <button onclick="navigator.clipboard.writeText('${linkUrl}'); showToast('📋', '链接已复制！');" class="px-3 py-2 rounded-xl bg-[#eff6ff] text-[#475569] hover:bg-[#e2e8f0] text-[11px] font-bold transition">
+                                📋 复制
+                            </button>
+                            <button onclick="deleteSingleAsset('${item.id}', event)" class="px-3 py-2 rounded-xl bg-[#fff1f2] text-[#ef4444] hover:bg-[#fee2e2] text-[11px] font-bold transition">
+                                🗑️
+                            </button>
+                        </div>
+                    `;
+                } else if (currentTab === 'gallery') {
                     const imgUrl = getAssetImageUrl(item);
                     card.className = `ui-card p-2 flex flex-col justify-between cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.99] relative group ${isSelected ? 'ring-2 ring-[#d88c9a] bg-[#fdf6f7]' : ''}`;
                     card.innerHTML = `
@@ -1226,7 +1254,7 @@ if (fileIn) {
                 return;
             }
 
-            if (item.category === 'themes') {
+            if (item.category === 'themes' || isCustomCategoryTab(item.category)) {
                 document.getElementById('headerExportActions').innerHTML = '';
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('theme-standalone');
@@ -1238,7 +1266,10 @@ if (fileIn) {
                     sizeText = formatFileSize(new Blob([item.rawText]).size);
                 }
 
-                const fileTypeUpper = (item.fileType || 'ZIP').toUpperCase();
+                const fileTypeUpper = (item.fileType || 'BIN').toUpperCase();
+                const isCustomFile = isCustomCategoryTab(item.category);
+                const detailTitle = isCustomFile ? '文件资产详情' : '美化资产详情';
+                const previewText = item.rawText || '';
                 const container = document.getElementById('subview-theme-standalone');
 
                 container.innerHTML = `
@@ -1248,7 +1279,7 @@ if (fileIn) {
                             <div class="flex items-center justify-between gap-2 border-b border-[#f5e1e3] pb-2">
                                 <div class="flex items-center gap-1.5 text-xs font-bold text-[#b86b7a]">
                                     <i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i>
-                                    <span>美化资产详情</span>
+                                    <span>${detailTitle}</span>
                                 </div>
                                 <button type="button" onclick="renameCurrentItem()" class="px-3 py-1 rounded-full bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] text-xs font-bold hover:bg-[#f2dadc] transition flex items-center gap-1 shrink-0">
                                     ✏️ 修改名字
@@ -1264,7 +1295,7 @@ if (fileIn) {
                             <div class="grid grid-cols-2 gap-2.5 pt-2">
                                 <div class="bg-[#fdf6f7] p-3 rounded-xl border border-[#f2dadc] flex flex-col justify-center">
                                     <span class="text-[10px] text-[#8c7173] block mb-1">文件格式</span>
-                                    <span class="text-xs font-bold font-mono text-[#b86b7a] truncate">${fileTypeUpper} 美化包</span>
+                                    <span class="text-xs font-bold font-mono text-[#b86b7a] truncate">${fileTypeUpper} ${isCustomFile ? '文件' : '美化包'}</span>
                                 </div>
                                 <div class="bg-[#fdf6f7] p-3 rounded-xl border border-[#f2dadc] flex flex-col justify-center">
                                     <span class="text-[10px] text-[#8c7173] block mb-1">文件大小</span>
@@ -1273,12 +1304,12 @@ if (fileIn) {
                             </div>
                         </div>
 
-                        <!-- 实时应用为全局皮肤按钮 -->
+                        ${!isCustomFile ? `
                         <div class="w-full pb-1">
                             <button type="button" onclick="applyThemeCodeAsGlobalCss()" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] text-white font-bold text-xs shadow-md hover:opacity-90 transition flex items-center justify-center gap-1.5">
                                 ✨ 实时应用为此 CSS 外观皮肤
                             </button>
-                        </div>
+                        </div>` : ''}
                         
                         <!-- 下载与删除双大按钮区 -->
                         <div class="grid grid-cols-2 gap-2.5 pt-1">
@@ -1297,10 +1328,10 @@ if (fileIn) {
                         </div>
                         
                         <!-- 代码与配置预览区 -->
-                        ${item.rawText ? `
+                        ${previewText ? `
                             <div class="w-full bg-white/80 rounded-2xl p-3.5 border border-[#f2dadc] space-y-2">
-                                <span class="text-xs font-bold text-[#8c7173] block">美化代码 / 配置数据预览:</span>
-                                <textarea readonly class="w-full h-40 bg-[#faf6f0] border border-[#f2dadc] rounded-xl p-2.5 text-[11px] font-mono text-[#4a3e3d] resize-none custom-scrollbar focus:outline-none leading-relaxed">${item.rawText}</textarea>
+                                <span class="text-xs font-bold text-[#8c7173] block">${isCustomFile ? '文件内容预览:' : '美化代码 / 配置数据预览:'}</span>
+                                <textarea readonly class="w-full h-40 bg-[#faf6f0] border border-[#f2dadc] rounded-xl p-2.5 text-[11px] font-mono text-[#4a3e3d] resize-none custom-scrollbar focus:outline-none leading-relaxed">${previewText}</textarea>
                             </div>
                         ` : ''}
                     </div>
@@ -2128,7 +2159,7 @@ window.deleteEntireFolder = deleteEntireFolder;
             showToast('⌛', `正在导入 ${files.length} 个美化/文档文件...`);
             try {
                 for (const file of files) {
-                    await processFile(file);
+                    await processFile(file, 'themes');
                 }
                 e.target.value = '';
                 allAssetsCache = null;
@@ -2217,3 +2248,167 @@ window.downloadThemeTextAsset = function() {
         }
 
         window.applyThemeCodeAsGlobalCss = applyThemeCodeAsGlobalCss;
+
+
+/* ------------------------------------------------------------
+   📁 自定义分类与 🔗 网址链接逻辑
+   ------------------------------------------------------------ */
+let customCategoryList = JSON.parse(localStorage.getItem('RESOURCE_CUSTOM_CATEGORIES') || '[]');
+customCategoryList = customCategoryList.map(x => typeof x === 'string' ? ({id:'custom:'+encodeURIComponent(x),name:x}) : x);
+
+function saveCustomCategoryList() {
+    localStorage.setItem('RESOURCE_CUSTOM_CATEGORIES', JSON.stringify(customCategoryList));
+    renderCustomCategoriesMenu();
+}
+
+function promptCreateCustomCategory() {
+    const catName = prompt('请输入新自定义分类名称：');
+    if (catName && catName.trim()) {
+        const clean = catName.trim();
+        if (!customCategoryList.some(x => x.name === clean)) {
+            customCategoryList.push({id:'custom:'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:clean});
+            saveCustomCategoryList();
+            showToast('📁', `已成功创建新自定义分类 “${clean}”！`);
+        } else {
+            showToast('⚠️', '该分类名称已存在！');
+        }
+    }
+}
+
+function toggleCustomCategoriesCollapse() {
+    const body = document.getElementById('customCategoriesBody');
+    const chevron = document.getElementById('customCatChevron');
+    if (body) {
+        body.classList.toggle('hidden');
+        if (chevron) chevron.classList.toggle('rotate-180');
+    }
+}
+
+function renderCustomCategoriesMenu() {
+    const container = document.getElementById('customCategoriesList');
+    if (!container) return;
+    container.innerHTML = '';
+    if (customCategoryList.length === 0) {
+        container.innerHTML = `<div class="text-[10px] text-[#94a3b8] py-1 text-center">暂无自定义分类，点击右上角添加</div>`;
+        return;
+    }
+    customCategoryList.forEach((cat, idx) => {
+        const catName=cat.name;
+        const catBtn = document.createElement('div');
+        catBtn.className = "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#334155] hover:bg-[#e2e8f0] transition group cursor-pointer";
+        catBtn.onclick = (e) => {
+            // 自定义分类必须走完整 Tab 切换，统一清理美化、图库、文档等旧面板
+            switchTab(cat.id, e);
+        };
+        catBtn.innerHTML = `
+            <div class="flex items-center gap-1.5 truncate">
+                <i data-lucide="folder" class="w-3.5 h-3.5 text-[#0284c7]"></i>
+                <span class="truncate">${catName}</span>
+            </div>
+            <button onclick="deleteCustomCategory(${idx}, event)" class="opacity-0 group-hover:opacity-100 p-0.5 text-[#94a3b8] hover:text-[#ef4444] transition">
+                <i data-lucide="trash-2" class="w-3 h-3"></i>
+            </button>
+        `;
+        container.appendChild(catBtn);
+    });
+    lucide.createIcons();
+}
+
+function deleteCustomCategory(idx, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const name = customCategoryList[idx]?.name || customCategoryList[idx];
+    if (confirm(`确定要删除自定义分类“${name}”吗？`)) {
+        customCategoryList.splice(idx, 1);
+        saveCustomCategoryList();
+        showToast('🗑️', `已删除分类 “${name}”`);
+    }
+}
+
+async function saveNewLinkAsset() {
+    const titleInput = document.getElementById('linkTitleInput');
+    const urlInput = document.getElementById('linkUrlInput');
+    const catInput = document.getElementById('linkCategoryInput');
+
+    const title = titleInput ? titleInput.value.trim() : '';
+    let url = urlInput ? urlInput.value.trim() : '';
+    const subCat = catInput ? catInput.value.trim() : '';
+
+    if (!title) { showToast('⚠️', '请输入网址名称！'); return; }
+    if (!url) { showToast('⚠️', '请输入 URL 网址！'); return; }
+
+    if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+    }
+
+    const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const asset = {
+        id,
+        category: 'links',
+        name: title,
+        url: url,
+        fileType: 'link',
+        subCategory: subCat,
+        rawText: `${title}\n${url}`,
+        createdAt: Date.now()
+    };
+
+    await saveAsset(asset);
+    if (titleInput) titleInput.value = '';
+    if (urlInput) urlInput.value = '';
+    if (catInput) catInput.value = '';
+
+    updateBadges();
+    renderItems();
+    showToast('🔗', `已成功添加网址链接 “${title}”！`);
+}
+
+function openLinkInDefaultBrowser(url) {
+    if (!url) return;
+    if (window.AndroidApp && typeof window.AndroidApp.openExternalBrowser === 'function') {
+        try {
+            window.AndroidApp.openExternalBrowser(url);
+            return;
+        } catch(e) { console.error('Android bridge openExternalBrowser failed', e); }
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+async function deleteSingleAsset(id, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (confirm('确定要删除这项资产吗？')) {
+        const tx = db.transaction('assets', 'readwrite');
+        tx.objectStore('assets').delete(id);
+        tx.oncomplete = async () => {
+            allAssetsCache = null;
+            if (supabaseClient) {
+                try { await supabaseClient.from('tavern_assets').delete().eq('id', id); } catch(err){}
+            }
+            updateBadges();
+            renderItems();
+            showToast('🗑️', '已删除');
+        };
+    }
+}
+
+window.toggleCustomCategoriesCollapse = toggleCustomCategoriesCollapse;
+window.promptCreateCustomCategory = promptCreateCustomCategory;
+window.renderCustomCategoriesMenu = renderCustomCategoriesMenu;
+window.deleteCustomCategory = deleteCustomCategory;
+window.saveNewLinkAsset = saveNewLinkAsset;
+window.openLinkInDefaultBrowser = openLinkInDefaultBrowser;
+window.deleteSingleAsset = deleteSingleAsset;
+
+// 初始化自定义分类列表
+document.addEventListener('DOMContentLoaded', () => {
+    renderCustomCategoriesMenu();
+    setTimeout(() => { if (typeof ensureCategoryImportUI === 'function') ensureCategoryImportUI(); }, 0);
+});
+
+async function pasteLinkFromClipboard(){ try { const t=await navigator.clipboard.readText(); const el=document.getElementById('linkUrlInput'); if(el) el.value=t.trim(); } catch(e){ showToast('⚠️','请允许读取剪贴板'); } }
+window.pasteLinkFromClipboard=pasteLinkFromClipboard;
+
+function toggleLinksPanel(){ const b=document.getElementById('linksPanelBody'); const c=document.getElementById('linksPanelChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+window.toggleLinksPanel=toggleLinksPanel;
+
+function toggleThemeBuilderPanel(){ const b=document.getElementById('themeBuilderBody'); const c=document.getElementById('themeBuilderChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+window.toggleThemeBuilderPanel=toggleThemeBuilderPanel;

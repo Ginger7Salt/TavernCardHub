@@ -21,6 +21,16 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="assets/css/main.css">
+
+<style id="test-gray-pink-overrides">
+#categoryImportBox .ui-card, #linksBuilderPanel, #themeBuilderPanel { color:#6f5b60 !important; }
+#categoryImportBox span, #categoryImportBox button, #categoryImportBox label { color:#9b6875 !important; }
+#categoryImportBox label, #linksBuilderPanel button, #themeBuilderPanel button { border-color:#e8c7cf !important; }
+#categoryImportBox label, #linksBuilderPanel .bg-[#eff6ff] { background:#f8e8ec !important; }
+#linksBuilderPanel h2, #themeBuilderPanel h2 { color:#765c63 !important; }
+#linksBuilderPanel .text-[#2563eb], #linksBuilderPanel .text-[#1e40af] { color:#9b6875 !important; }
+#linksBuilderPanel .bg-[#2563eb] { background:#c98294 !important; }
+</style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden bg-[#faf6f0]">
 
@@ -41,12 +51,7 @@
             <h1 class="font-bold text-base text-[#4a3e3d] tracking-tight" id="pageTitle">资源合集</h1>
         </div>
         <div class="flex items-center gap-2">
-            <label class="cursor-pointer px-3.5 py-1.5 rounded-full bg-[#d88c9a] hover:bg-[#c97b8b] text-white text-xs font-semibold shadow-sm shadow-[#d88c9a]/30 transition flex items-center gap-1.5">
-                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                <span>导入文件</span>
-                <input type="file" id="fileInput" multiple accept=".zip,.css,.json,.txt,.docx,.png" class="hidden">
-            </label>
-        </div>
+</div>
     </header>
 
     <!-- Main Container -->
@@ -142,6 +147,32 @@
                     </div>
                     <span id="badge-fonts" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
                 </button>
+
+                <button onclick="switchTab('links', event)" id="tab-links" class="tab-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#785e60] hover:bg-[#fdf4f5] transition">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="link" class="w-4 h-4 text-[#2563eb]"></i>
+                        <span>🔗 网址与链接 (Links)</span>
+                    </div>
+                    <span id="badge-links" class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#8c7173] font-mono">0</span>
+                </button>
+            </div>
+
+            <!-- 📁 自定义添加分类折叠抽屉 -->
+            <div class="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <button onclick="toggleCustomCategoriesCollapse()" class="text-xs font-bold text-[#334155] flex items-center gap-1.5">
+                        <i data-lucide="folder-plus" class="w-4 h-4 text-[#0284c7]"></i>
+                        <span>📁 自定义添加分类</span>
+                        <i data-lucide="chevron-down" id="customCatChevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                    </button>
+                    <button onclick="promptCreateCustomCategory()" class="text-[10px] px-2 py-0.5 rounded-full bg-[#e0f2fe] text-[#0369a1] font-bold hover:bg-[#bae6fd] transition">
+                        + 新增分类
+                    </button>
+                </div>
+
+                <div id="customCategoriesBody" class="space-y-1 pt-1 hidden">
+                    <div id="customCategoriesList" class="space-y-1"></div>
+                </div>
             </div>
 
             <!-- GitHub Sync Collapsible Section -->
@@ -417,14 +448,14 @@
             
             <!-- Custom Panel for Beauty & Theme Import -->
             <div id="themeBuilderPanel" class="hidden mb-4 ui-card p-4 space-y-3 border-[#f2dadc] bg-[#fdf6f7]">
-                <div class="flex items-center justify-between border-b border-[#f2dadc] pb-2 flex-wrap gap-2">
+                <button type="button" onclick="toggleThemeBuilderPanel()" class="w-full flex items-center justify-between border-b border-[#f2dadc] pb-2 flex-wrap gap-2 text-left">
                     <div class="flex items-center gap-2">
                         <i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i>
                         <h2 class="text-xs font-bold text-[#5c494a]">美化主题包仓库 (支持 ZIP/JSON/CSS/文档)</h2>
                     </div>
-                    <span class="text-[10px] text-[#b86b7a] font-mono">可以直接粘贴代码导入或拖入 ZIP 包</span>
-                </div>
-                <div class="space-y-2">
+                    <span class="flex items-center gap-2 text-[10px] text-[#b86b7a] font-mono">可以直接粘贴代码导入或拖入 ZIP 包 <b id="themeBuilderChevron">⌄</b></span>
+                </button>
+                <div id="themeBuilderBody" class="hidden space-y-2 pt-3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <input type="text" id="themeTitleInput" placeholder="美化名称 (例如: SullyOS毛玻璃主题、酒馆CSS...)" class="w-full bg-white border border-[#f2dadc] rounded-lg px-2.5 py-1.5 text-xs text-[#5c494a] focus:outline-none focus:border-[#d88c9a]">
                         <div class="flex items-center gap-2">
@@ -506,6 +537,25 @@
                             <i data-lucide="plus-circle" class="w-4 h-4"></i>
                             <span>生成表情包总合集</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div id="linksBuilderPanel" class="hidden mb-4 ui-card border border-[#dbeafe] bg-[#f8fbff] overflow-hidden">
+                <button type="button" onclick="toggleLinksPanel()" class="w-full p-4 flex items-center justify-between text-left">
+                    <div><h2 class="text-sm font-bold text-[#1e40af]">🔗 网址链接管理</h2><p class="text-[10px] text-[#64748b]">复制粘贴保存 · 分类整理 · 默认浏览器打开</p></div>
+                    <div class="flex items-center gap-2"><span id="linksCountHint" class="text-[10px] text-[#2563eb]">0 条链接</span><span id="linksPanelChevron" class="text-[#60a5fa]">⌄</span></div>
+                </button>
+                <div id="linksPanelBody" class="hidden px-4 pb-4 space-y-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input id="linkTitleInput" type="text" placeholder="链接名称" class="w-full bg-white border border-[#bfdbfe] rounded-lg px-3 py-2 text-xs text-[#1e3a8a]">
+                        <input id="linkUrlInput" type="url" placeholder="粘贴 https://... 网址" class="w-full bg-white border border-[#bfdbfe] rounded-lg px-3 py-2 text-xs font-mono text-[#1e3a8a]">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+                        <input id="linkCategoryInput" type="text" placeholder="分类（可选）" class="w-full bg-white border border-[#bfdbfe] rounded-lg px-3 py-2 text-xs text-[#1e3a8a]">
+                        <button type="button" onclick="saveNewLinkAsset()" class="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold">＋保存链接</button>
+                        <button type="button" onclick="pasteLinkFromClipboard()" class="px-4 py-2 rounded-xl bg-[#eff6ff] text-[#2563eb] text-xs font-bold">📋 粘贴</button>
                     </div>
                 </div>
             </div>
@@ -705,7 +755,8 @@
     <script src="assets/js/core.js"></script>
     <script src="assets/js/sync.js"></script>
     <script src="assets/js/apikeys.js"></script>
-    <script src="assets/js/ui.js?v=20260804_1120"></script>
+    <script src="assets/js/ui.js?v=20260804_1516"></script>
+    <script src="assets/js/links.js?v=20260804_1421"></script>
     <script src="assets/js/font.js"></script>
 </body>
 </html>
