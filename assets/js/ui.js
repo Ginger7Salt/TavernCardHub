@@ -1273,6 +1273,13 @@ if (fileIn) {
                             </div>
                         </div>
 
+                        <!-- 实时应用为全局皮肤按钮 -->
+                        <div class="w-full pb-1">
+                            <button type="button" onclick="applyThemeCodeAsGlobalCss()" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#0284c7] to-[#0369a1] text-white font-bold text-xs shadow-md hover:opacity-90 transition flex items-center justify-center gap-1.5">
+                                ✨ 实时应用为此 CSS 外观皮肤
+                            </button>
+                        </div>
+                        
                         <!-- 下载与删除双大按钮区 -->
                         <div class="grid grid-cols-2 gap-2.5 pt-1">
                             ${item.rawBuffer ? `
@@ -2185,3 +2192,28 @@ window.downloadThemeTextAsset = function() {
     const mime = currentItem.fileType === 'json' ? 'application/json' : 'text/css';
     downloadText(currentItem.rawText || '', filename, mime);
 };
+
+
+        function applyThemeCodeAsGlobalCss() {
+            if (!currentItem) return;
+            const cssText = currentItem.rawText || '';
+            if (!cssText) {
+                showToast('⚠️', '该资产暂无可应用的 CSS 代码！');
+                return;
+            }
+            localStorage.setItem('TAVERN_CUSTOM_CSS', cssText);
+            if (typeof initCustomCss === 'function') {
+                initCustomCss();
+            } else {
+                let styleTag = document.getElementById('appCustomUserCss');
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = 'appCustomUserCss';
+                    document.head.appendChild(styleTag);
+                }
+                styleTag.textContent = cssText;
+            }
+            showToast('🎨', `已成功将 “${currentItem.name}” 应用为当前系统主题外观！`);
+        }
+
+        window.applyThemeCodeAsGlobalCss = applyThemeCodeAsGlobalCss;
