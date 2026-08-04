@@ -283,31 +283,45 @@ lucide.createIcons();
 
         const PRESET_THEMES = {
             default: '',
-                        dark: `/* 🌌 绝美暗夜毛玻璃主题 */
+                                    dark: `/* 🌌 绝美暗夜全景毛玻璃主题 */
+body, main, header, div, section, article {
+    background-color: transparent !important;
+}
 body {
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1625 100%) fixed !important;
+    background: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1a1528 100%) fixed !important;
     color: #e6edf3 !important;
 }
-.bg-[#faf6f0] { background: transparent !important; }
+main {
+    background: transparent !important;
+}
+.bg-[#faf6f0], .bg-white\/50 { 
+    background: transparent !important; 
+}
 .bg-white { 
-    background: rgba(22, 27, 34, 0.6) !important; 
+    background: rgba(22, 27, 34, 0.65) !important; 
     backdrop-filter: blur(16px) !important; 
     -webkit-backdrop-filter: blur(16px) !important;
     color: #f0f6fc !important; 
-    border: 1px solid rgba(248, 180, 200, 0.15) !important; 
+    border-color: rgba(248, 180, 200, 0.15) !important; 
     box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
 }
+aside {
+    background: rgba(17, 24, 39, 0.8) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(216, 140, 154, 0.2) !important;
+}
 .ui-card { 
-    background: rgba(30, 38, 52, 0.55) !important; 
+    background: rgba(30, 41, 59, 0.6) !important; 
     backdrop-filter: blur(14px) !important; 
     -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(216, 140, 154, 0.22) !important; 
+    border: 1px solid rgba(216, 140, 154, 0.25) !important; 
     color: #f0f6fc !important; 
     box-shadow: 0 4px 20px rgba(0,0,0,0.25) !important;
 }
 .ui-card:hover {
     border-color: rgba(216, 140, 154, 0.5) !important;
-    box-shadow: 0 6px 25px rgba(216, 140, 154, 0.15) !important;
+    box-shadow: 0 6px 25px rgba(216, 140, 154, 0.2) !important;
 }
 .text-[#4a3e3d], .text-[#5c494a], .text-[#3a3535] { color: #f0f6fc !important; }
 .text-[#b86b7a], .text-[#d88c9a] { color: #f4a2b2 !important; }
@@ -318,7 +332,7 @@ body {
 }
 .border-[#f2e3e3], .border-[#f2dadc] { border-color: rgba(216, 140, 154, 0.2) !important; }
 input, textarea { 
-    background: rgba(13, 17, 23, 0.7) !important; 
+    background: rgba(15, 23, 42, 0.75) !important; 
     color: #f0f6fc !important; 
     border: 1px solid rgba(216, 140, 154, 0.25) !important; 
     backdrop-filter: blur(10px) !important;
