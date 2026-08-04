@@ -136,7 +136,23 @@ if (fileIn) {
                 await saveAsset(asset);
             } else if (ext === 'json') {
                 const text = await file.text(); let json = {}; try { json = JSON.parse(text); } catch(err){}
-                let category = 'cards', name = file.name.replace('.json', ''), dataObj = json.data || json;
+                
+                // 如果当前处于“美化”分类，优先锁定入库到美化 (themes) 仓库！
+                if (currentTab === 'themes') {
+                    await saveAsset({
+                        id,
+                        category: 'themes',
+                        name: file.name.replace(/\.json$/i, ''),
+                        fileType: 'json',
+                        cardData: json,
+                        rawText: text,
+                        subCategory: currentFolderOpened || '',
+                        createdAt: Date.now()
+                    });
+                    return;
+                }
+
+                let category = 'cards', name = file.name.replace(/\.json$/i, ''), dataObj = json.data || json;
                 
                 let wbObj = null;
                 if (json.entries && (Array.isArray(json.entries) || typeof json.entries === 'object')) {
@@ -162,7 +178,7 @@ if (fileIn) {
                 }
 
                 const extractedTags = extractTagsFromData(dataObj || json);
-                const asset = { id, category, name, fileType: 'json', cardData: json, tags: extractedTags, rawText: text, createdAt: Date.now(), firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
+                const asset = { id, category, name, fileType: 'json', cardData: json, tags: extractedTags, rawText: text, createdAt: Date.now(), subCategory: currentFolderOpened || '', firstMes: dataObj.first_mes || '', alternateGreetings: dataObj.alternate_greetings || [], personality: extractPersonalityDeep(json), worldbook: wbObj || (category === 'worldbooks' ? json : null), regexScripts: dataObj.extensions?.regex_scripts || (category === 'regex' ? json : null) };
                 await saveAsset(asset);
             } else if (ext === 'txt') {
                 const text = await file.text();
