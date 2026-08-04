@@ -276,14 +276,11 @@ lucide.createIcons();
             showToast('✅', 'Supabase 云端凭证已保存并连接！');
         }
 
-        // ============================================================
-        // 🎨 外观美化与自定义 CSS 代码动态注入模块
+                // ============================================================
+        // ✨ 全景晶莹毛玻璃 (Full Glassmorphism) 默认加载引擎
         // ============================================================
         let customCssCollapsed = true;
-
-                        const PRESET_THEMES = {
-            default: '',
-            full_glass: `/* ✨ 梦幻全景通透毛玻璃 */
+        const DEFAULT_GLASS_CSS = `/* ✨ 全景晶莹透光毛玻璃 (Full Glassmorphism) */
 body {
     background: linear-gradient(135deg, #fef4f6 0%, #f5e1e4 50%, #edd3d8 100%) fixed !important;
 }
@@ -293,16 +290,16 @@ body, main, header, div, section, article {
 .bg-[#faf6f0], .bg-white\/50, main { 
     background: transparent !important; 
 }
-/* 侧边栏全面毛玻璃 */
+/* 侧边栏 20px 级极清毛玻璃 */
 aside {
-    background: rgba(255, 255, 255, 0.4) !important;
+    background: rgba(255, 255, 255, 0.45) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
     border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
 }
-/* 搜索顶栏全面毛玻璃 */
+/* 搜索顶栏毛玻璃 */
 .p-3.bg-white, .bg-white {
-    background: rgba(255, 255, 255, 0.45) !important;
+    background: rgba(255, 255, 255, 0.5) !important;
     backdrop-filter: blur(18px) !important;
     -webkit-backdrop-filter: blur(18px) !important;
     border: 1px solid rgba(255, 255, 255, 0.6) !important;
@@ -313,28 +310,27 @@ aside {
     background: rgba(255, 255, 255, 0.5) !important;
     backdrop-filter: blur(18px) !important;
     -webkit-backdrop-filter: blur(18px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
     box-shadow: 0 4px 20px rgba(216, 140, 154, 0.1) !important;
     border-radius: 18px !important;
 }
 .ui-card:hover {
-    background: rgba(255, 255, 255, 0.65) !important;
+    background: rgba(255, 255, 255, 0.68) !important;
     border-color: rgba(216, 140, 154, 0.5) !important;
     box-shadow: 0 10px 30px rgba(216, 140, 154, 0.22) !important;
 }
 /* 输入框与弹窗毛玻璃 */
 input, textarea, select {
-    background: rgba(255, 255, 255, 0.55) !important;
+    background: rgba(255, 255, 255, 0.6) !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     border: 1px solid rgba(255, 255, 255, 0.7) !important;
 }
 .bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
-    background: rgba(248, 238, 238, 0.6) !important;
+    background: rgba(248, 238, 238, 0.65) !important;
     backdrop-filter: blur(10px) !important;
     color: #b86b7a !important;
-}`
-        };
+}`;
 
         function toggleCustomCssCollapse() {
             customCssCollapsed = !customCssCollapsed;
@@ -350,7 +346,11 @@ input, textarea, select {
         }
 
         function initCustomCss() {
-            const savedCss = localStorage.getItem('TAVERN_CUSTOM_CSS') || '';
+            let savedCss = localStorage.getItem('TAVERN_CUSTOM_CSS');
+            if (savedCss === null) {
+                savedCss = DEFAULT_GLASS_CSS;
+                localStorage.setItem('TAVERN_CUSTOM_CSS', savedCss);
+            }
             let styleTag = document.getElementById('appCustomUserCss');
             if (!styleTag) {
                 styleTag = document.createElement('style');
@@ -367,19 +367,16 @@ input, textarea, select {
             const css = inputEl ? inputEl.value : '';
             localStorage.setItem('TAVERN_CUSTOM_CSS', css);
             initCustomCss();
-            showToast('🎨', '自定义 CSS 样式已保存并立即生效！');
+            showToast('✨', '自定义 CSS 毛玻璃样式已保存并更新！');
         }
 
-        function applyPresetTheme(themeKey) {
-            const css = PRESET_THEMES[themeKey] || '';
-            const inputEl = document.getElementById('userCustomCssInput');
-            if (inputEl) inputEl.value = css;
-            localStorage.setItem('TAVERN_CUSTOM_CSS', css);
+        function restoreDefaultGlassCss() {
+            localStorage.setItem('TAVERN_CUSTOM_CSS', DEFAULT_GLASS_CSS);
             initCustomCss();
-            showToast('✨', '主题预设已应用！');
+            showToast('🔄', '已重置为默认全景毛玻璃样式！');
         }
 
         window.toggleCustomCssCollapse = toggleCustomCssCollapse;
         window.saveAndApplyUserCustomCss = saveAndApplyUserCustomCss;
-        window.applyPresetTheme = applyPresetTheme;
+        window.restoreDefaultGlassCss = restoreDefaultGlassCss;
         window.initCustomCss = initCustomCss;

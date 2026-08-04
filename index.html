@@ -151,19 +151,12 @@
                 </div>
 
                 <div id="customCssBody" class="space-y-2.5 pt-1 hidden">
-                    <div>
-                        <label class="block text-[10px] font-semibold text-[#8c7476] mb-1">一键快捷应用主题预设：</label>
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <button onclick="applyPresetTheme('full_glass')" class="px-2 py-1 bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] rounded-lg text-[10px] font-bold hover:bg-[#f8eeee] transition shadow-2xs">✨ 全景晶莹毛玻璃</button>
-                            <button onclick="applyPresetTheme('morandi_pink')" class="px-2 py-1 bg-white border border-[#f2dadc] text-[#b86b7a] rounded-lg text-[10px] font-bold hover:bg-[#fdf4f5] transition">🌸 莫兰迪暖粉</button>
-                            <button onclick="applyPresetTheme('morandi_blue')" class="px-2 py-1 bg-[#e2eaf1] border border-[#cbd5e1] text-[#4a6572] rounded-lg text-[10px] font-bold hover:bg-[#d0dee8] transition">🌊 莫兰迪海蓝</button>
-                            <button onclick="applyPresetTheme('default')" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition">🔄 恢复默认</button>
-                        </div>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[10px] font-semibold text-[#8c7476]">自定义 CSS 样式 (已包含全景晶莹毛玻璃源码)：</label>
+                        <button onclick="restoreDefaultGlassCss()" class="text-[9px] text-[#b86b7a] hover:underline font-bold">🔄 重置为默认毛玻璃</button>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">自定义 CSS 代码 (实时生效 & 云备份)：</label>
-                        <textarea id="userCustomCssInput" placeholder="在此粘贴你的自定义 CSS 代码... 例如:
-body { background: url('https://...') !important; }" class="w-full h-24 bg-white border border-[#f2e3e3] rounded-lg p-2 text-[10px] font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
+                        <textarea id="userCustomCssInput" placeholder="在此微调或粘贴你的自定义 CSS 代码..." class="w-full h-32 bg-white border border-[#f2e3e3] rounded-lg p-2 text-[10px] font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
                     </div>
                     <button onclick="saveAndApplyUserCustomCss()" class="w-full py-1.5 rounded-xl bg-[#d88c9a] text-white hover:bg-[#c97b8b] transition font-bold text-xs text-center shadow-xs">
                         💾 保存并应用 CSS 样式
