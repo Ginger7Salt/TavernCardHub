@@ -1,4 +1,12 @@
 
+window.getCleanAssetFilename = function(item) {
+    if (!item) return 'theme_file.json';
+    const ext = item.fileType || 'json';
+    const cleanName = item.name.replace(/\.(json|css|txt|zip|docx|png)$/i, '').trim() || '美化资产';
+    return `${cleanName}.${ext}`;
+};
+
+
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '动态大小';
     const k = 1024;
