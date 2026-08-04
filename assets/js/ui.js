@@ -1268,12 +1268,12 @@ if (fileIn) {
                         <!-- 下载与删除双大按钮区 -->
                         <div class="grid grid-cols-2 gap-2.5 pt-1">
                             ${item.rawBuffer ? `
-                                <button type="button" onclick="downloadBuffer(currentItem.rawBuffer, currentItem.name + '.' + (currentItem.fileType || 'zip'), 'application/zip')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                <button type="button" onclick="downloadThemeBufferAsset()" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
                                     📥 下载文件
                                 </button>
                             ` : `
-                                <button type="button" onclick="downloadText(currentItem.rawText || '', currentItem.name + '.' + (currentItem.fileType || 'css'), 'text/plain')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
-                                    📥 下载代码文件
+                                <button type="button" onclick="downloadThemeTextAsset()" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                    📥 下载美化文件
                                 </button>
                             `}
                             <button type="button" onclick="deleteCurrentItem()" class="w-full py-3 rounded-xl bg-[#f5e1e3] border border-[#f2dadc] text-[#c95368] font-bold text-xs hover:bg-[#f0cfd3] transition flex items-center justify-center gap-1.5">
@@ -2129,3 +2129,29 @@ window.deleteEntireFolder = deleteEntireFolder;
         window.savePastedThemeCode = savePastedThemeCode;
         window.triggerThemeFileInput = triggerThemeFileInput;
         window.handleThemeFilesImport = handleThemeFilesImport;
+
+
+        // 清洁后缀导出引擎，彻底解决 .json.txt 误拼接 Bug
+        function getCleanAssetFilename(item) {
+            if (!item) return 'theme_file.json';
+            const ext = item.fileType || 'json';
+            const cleanName = item.name.replace(/\.(json|css|txt|zip|docx|png)$/i, '').trim() || '美化资产';
+            return `${cleanName}.${ext}`;
+        }
+
+        function downloadThemeBufferAsset() {
+            if (!currentItem) return;
+            const filename = getCleanAssetFilename(currentItem);
+            const mime = currentItem.fileType === 'zip' ? 'application/zip' : 'application/octet-stream';
+            downloadBuffer(currentItem.rawBuffer, filename, mime);
+        }
+
+        function downloadThemeTextAsset() {
+            if (!currentItem) return;
+            const filename = getCleanAssetFilename(currentItem);
+            const mime = currentItem.fileType === 'json' ? 'application/json' : 'text/css';
+            downloadText(currentItem.rawText || '', filename, mime);
+        }
+
+        window.downloadThemeBufferAsset = downloadThemeBufferAsset;
+        window.downloadThemeTextAsset = downloadThemeTextAsset;
