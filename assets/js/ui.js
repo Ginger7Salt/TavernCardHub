@@ -1219,8 +1219,9 @@ if (fileIn) {
             }
 
             if (item.category === 'themes') {
+                document.getElementById('headerExportActions').innerHTML = '';
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
-                switchDetailTab('doc-full');
+                switchDetailTab('theme-standalone');
                 
                 let sizeText = '按需大小';
                 if (item.rawBuffer) {
@@ -1230,26 +1231,29 @@ if (fileIn) {
                 }
 
                 const fileTypeUpper = (item.fileType || 'ZIP').toUpperCase();
+                const container = document.getElementById('subview-theme-standalone');
 
-                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i><span>美化主题详情</span>`;
-                
-                // 完全重写，防止父级 CSS 缩进造成竖排文字与排版挤压
-                document.getElementById('docFullContentText').innerHTML = `
+                container.innerHTML = `
                     <div class="w-full space-y-3 pt-1">
-                        <!-- 主信息面板 -->
+                        <!-- 顶栏精美标题卡 -->
                         <div class="w-full bg-white/90 rounded-2xl p-4 border border-[#f2dadc] shadow-xs space-y-3">
-                            <div class="flex items-center justify-between gap-2 border-b border-[#f5e1e3] pb-2.5">
-                                <span class="text-xs font-bold text-[#8c7173] whitespace-nowrap">美化主题名字</span>
+                            <div class="flex items-center justify-between gap-2 border-b border-[#f5e1e3] pb-2">
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-[#b86b7a]">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i>
+                                    <span>美化资产详情</span>
+                                </div>
                                 <button type="button" onclick="renameCurrentItem()" class="px-3 py-1 rounded-full bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] text-xs font-bold hover:bg-[#f2dadc] transition flex items-center gap-1 shrink-0">
                                     ✏️ 修改名字
                                 </button>
                             </div>
                             
-                            <div class="text-sm md:text-base font-bold text-[#4a3e3d] break-all leading-snug">
+                            <!-- 名字展示区 -->
+                            <div class="text-base font-bold text-[#4a3e3d] break-all leading-relaxed pt-1">
                                 ${item.name}
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-2.5 pt-1">
+                            <!-- 格式与大小指标卡 -->
+                            <div class="grid grid-cols-2 gap-2.5 pt-2">
                                 <div class="bg-[#fdf6f7] p-3 rounded-xl border border-[#f2dadc] flex flex-col justify-center">
                                     <span class="text-[10px] text-[#8c7173] block mb-1">文件格式</span>
                                     <span class="text-xs font-bold font-mono text-[#b86b7a] truncate">${fileTypeUpper} 美化包</span>
@@ -1262,7 +1266,7 @@ if (fileIn) {
                         </div>
 
                         <!-- 导出与复制大按钮 -->
-                        <div class="w-full pt-1">
+                        <div class="w-full">
                             ${item.rawBuffer ? `
                                 <button type="button" onclick="downloadBuffer(currentItem.rawBuffer, currentItem.name + '.' + (currentItem.fileType || 'zip'), 'application/zip')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-2">
                                     📥 导出 / 下载原始美化包
@@ -1274,11 +1278,11 @@ if (fileIn) {
                             `}
                         </div>
                         
-                        <!-- 代码与数据预览区 -->
+                        <!-- 代码与配置预览区 -->
                         ${item.rawText ? `
-                            <div class="w-full bg-white/80 rounded-2xl p-3 border border-[#f2dadc] space-y-1.5">
+                            <div class="w-full bg-white/80 rounded-2xl p-3.5 border border-[#f2dadc] space-y-2">
                                 <span class="text-xs font-bold text-[#8c7173] block">美化代码 / 配置数据预览:</span>
-                                <textarea readonly class="w-full h-36 bg-[#faf6f0] border border-[#f2dadc] rounded-xl p-2.5 text-[11px] font-mono text-[#4a3e3d] resize-none custom-scrollbar focus:outline-none">${item.rawText}</textarea>
+                                <textarea readonly class="w-full h-40 bg-[#faf6f0] border border-[#f2dadc] rounded-xl p-2.5 text-[11px] font-mono text-[#4a3e3d] resize-none custom-scrollbar focus:outline-none leading-relaxed">${item.rawText}</textarea>
                             </div>
                         ` : ''}
                     </div>
@@ -1493,7 +1497,7 @@ if (fileIn) {
         function switchDetailTab(subtab) {
             document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
             const activePill = document.getElementById(`detail-tab-${subtab}`); if (activePill) activePill.classList.add('active');
-            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full', 'emoji-grid'].forEach(st => {
+            ['overview', 'greetings', 'worldbook', 'regex', 'doc-full', 'emoji-grid', 'theme-standalone'].forEach(st => {
                 const el = document.getElementById(`subview-${st}`);
                 if (st === subtab) el.classList.remove('hidden'); else el.classList.add('hidden');
             });
