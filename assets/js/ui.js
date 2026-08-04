@@ -2155,3 +2155,4 @@ window.deleteEntireFolder = deleteEntireFolder;
 
         window.downloadThemeBufferAsset = downloadThemeBufferAsset;
         window.downloadThemeTextAsset = downloadThemeTextAsset;
+        window.getCleanAssetFilename = getCleanAssetFilename;
