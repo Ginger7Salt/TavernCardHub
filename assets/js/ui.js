@@ -1,3 +1,12 @@
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '动态大小';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 function switchTab(tab, e) {
     currentTab = tab;
     if (typeof currentFolderOpened !== 'undefined') currentFolderOpened = null;
@@ -1189,6 +1198,68 @@ if (fileIn) {
                 switchDetailTab('doc-full');
                 document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#7a9bb8]"></i><span>番外/小剧场 内容</span>`;
                 document.getElementById('docFullContentText').innerText = item.rawText || '无内容';
+                lucide.createIcons();
+                return;
+            }
+
+            if (item.category === 'themes') {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                
+                let sizeText = '按需大小';
+                if (item.rawBuffer) {
+                    sizeText = formatFileSize(item.rawBuffer.byteLength || item.rawBuffer.size || 0);
+                } else if (item.rawText) {
+                    sizeText = formatFileSize(new Blob([item.rawText]).size);
+                }
+
+                const fileTypeUpper = (item.fileType || 'ZIP').toUpperCase();
+
+                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#d88c9a]"></i><span>美化资产详情</span>`;
+                
+                document.getElementById('docFullContentText').innerHTML = `
+                    <div class="space-y-4 py-2">
+                        <div class="ui-card p-4 bg-white/80 rounded-2xl border border-[#f2dadc] space-y-3 shadow-xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-[#8c7173]">美化资产名字</span>
+                                <button onclick="renameCurrentItem()" class="px-3 py-1.5 rounded-xl bg-[#f8eeee] text-[#b86b7a] text-xs font-bold hover:bg-[#f2dadc] transition flex items-center gap-1 shrink-0">
+                                    ✏️ 修改改名
+                                </button>
+                            </div>
+                            <div class="text-base font-bold text-[#4a3e3d] break-all">${item.name}</div>
+                            
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-[#f5e1e3]">
+                                <div class="bg-[#fdf6f7] p-2.5 rounded-xl border border-[#f2dadc]">
+                                    <span class="text-[10px] text-[#8c7173] block mb-0.5">文件格式</span>
+                                    <span class="text-xs font-bold font-mono text-[#b86b7a]">${fileTypeUpper} 美化包</span>
+                                </div>
+                                <div class="bg-[#fdf6f7] p-2.5 rounded-xl border border-[#f2dadc]">
+                                    <span class="text-[10px] text-[#8c7173] block mb-0.5">文件大小</span>
+                                    <span class="text-xs font-bold font-mono text-[#4a3e3d]">${sizeText}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            ${item.rawBuffer ? `
+                                <button onclick="downloadBuffer(currentItem.rawBuffer, currentItem.name + '.' + (currentItem.fileType || 'zip'), 'application/zip')" class="flex-1 py-2.5 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-xs hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                    📥 导出/下载原始文件
+                                </button>
+                            ` : `
+                                <button onclick="navigator.clipboard.writeText(currentItem.rawText || ''); showToast('📋', '美化代码已复制到剪贴板！');" class="flex-1 py-2.5 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-xs hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                    📋 复制美化代码 (CSS/JSON)
+                                </button>
+                            `}
+                        </div>
+                        
+                        ${item.rawText ? `
+                            <div class="pt-2">
+                                <span class="text-xs font-bold text-[#8c7173] block mb-1">美化代码 / 配置数据:</span>
+                                <textarea readonly class="w-full h-36 bg-white/70 border border-[#f2dadc] rounded-xl p-3 text-[11px] font-mono text-[#4a3e3d] resize-none custom-scrollbar">${item.rawText}</textarea>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
                 lucide.createIcons();
                 return;
             }
