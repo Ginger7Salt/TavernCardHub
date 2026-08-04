@@ -1265,17 +1265,20 @@ if (fileIn) {
                             </div>
                         </div>
 
-                        <!-- 导出与复制大按钮 -->
-                        <div class="w-full">
+                        <!-- 下载与删除双大按钮区 -->
+                        <div class="grid grid-cols-2 gap-2.5 pt-1">
                             ${item.rawBuffer ? `
-                                <button type="button" onclick="downloadBuffer(currentItem.rawBuffer, currentItem.name + '.' + (currentItem.fileType || 'zip'), 'application/zip')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-2">
-                                    📥 导出 / 下载原始美化包
+                                <button type="button" onclick="downloadBuffer(currentItem.rawBuffer, currentItem.name + '.' + (currentItem.fileType || 'zip'), 'application/zip')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                    📥 下载文件
                                 </button>
                             ` : `
-                                <button type="button" onclick="navigator.clipboard.writeText(currentItem.rawText || ''); showToast('📋', '美化代码已复制到剪贴板！');" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-2">
-                                    📋 复制美化代码 (CSS/JSON)
+                                <button type="button" onclick="downloadText(currentItem.rawText || '', currentItem.name + '.' + (currentItem.fileType || 'css'), 'text/plain')" class="w-full py-3 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-sm hover:bg-[#c97b8b] transition flex items-center justify-center gap-1.5">
+                                    📥 下载代码文件
                                 </button>
                             `}
+                            <button type="button" onclick="deleteCurrentItem()" class="w-full py-3 rounded-xl bg-[#f5e1e3] border border-[#f2dadc] text-[#c95368] font-bold text-xs hover:bg-[#f0cfd3] transition flex items-center justify-center gap-1.5">
+                                🗑️ 删除资产
+                            </button>
                         </div>
                         
                         <!-- 代码与配置预览区 -->
