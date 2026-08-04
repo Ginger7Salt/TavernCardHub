@@ -281,73 +281,62 @@ lucide.createIcons();
         // ============================================================
         let customCssCollapsed = true;
 
-        const PRESET_THEMES = {
+                const PRESET_THEMES = {
             default: '',
-                                    dark: `/* 🌌 绝美暗夜全景毛玻璃主题 */
-body, main, header, div, section, article {
-    background-color: transparent !important;
-}
+            morandi_pink: `/* 🌸 莫兰迪暖粉手账 */
 body {
-    background: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1a1528 100%) fixed !important;
-    color: #e6edf3 !important;
+    background: linear-gradient(135deg, #fbf2f4 0%, #f7e8ea 50%, #f5e3e6 100%) fixed !important;
 }
-main {
-    background: transparent !important;
-}
-.bg-[#faf6f0], .bg-white\/50 { 
-    background: transparent !important; 
-}
-.bg-white { 
-    background: rgba(22, 27, 34, 0.65) !important; 
-    backdrop-filter: blur(16px) !important; 
+.bg-[#faf6f0], main { background: transparent !important; }
+.bg-white {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
-    color: #f0f6fc !important; 
-    border-color: rgba(248, 180, 200, 0.15) !important; 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    border: 1px solid rgba(216, 140, 154, 0.25) !important;
+    box-shadow: 0 8px 30px rgba(216, 140, 154, 0.08) !important;
 }
-aside {
-    background: rgba(17, 24, 39, 0.8) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border-right: 1px solid rgba(216, 140, 154, 0.2) !important;
-}
-.ui-card { 
-    background: rgba(30, 41, 59, 0.6) !important; 
-    backdrop-filter: blur(14px) !important; 
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(216, 140, 154, 0.25) !important; 
-    color: #f0f6fc !important; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25) !important;
+.ui-card {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(216, 140, 154, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(216, 140, 154, 0.06) !important;
+    border-radius: 16px !important;
 }
 .ui-card:hover {
-    border-color: rgba(216, 140, 154, 0.5) !important;
-    box-shadow: 0 6px 25px rgba(216, 140, 154, 0.2) !important;
+    border-color: #d88c9a !important;
+    box-shadow: 0 6px 20px rgba(216, 140, 154, 0.15) !important;
 }
-.text-[#4a3e3d], .text-[#5c494a], .text-[#3a3535] { color: #f0f6fc !important; }
-.text-[#b86b7a], .text-[#d88c9a] { color: #f4a2b2 !important; }
-.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] { 
-    background: rgba(216, 140, 154, 0.18) !important; 
-    color: #f4a2b2 !important; 
-    border-color: rgba(216, 140, 154, 0.2) !important;
-}
-.border-[#f2e3e3], .border-[#f2dadc] { border-color: rgba(216, 140, 154, 0.2) !important; }
-input, textarea { 
-    background: rgba(15, 23, 42, 0.75) !important; 
-    color: #f0f6fc !important; 
-    border: 1px solid rgba(216, 140, 154, 0.25) !important; 
-    backdrop-filter: blur(10px) !important;
+.text-[#b86b7a], .text-[#d88c9a] { color: #c97b8b !important; }
+.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
+    background: rgba(248, 238, 238, 0.85) !important;
+    color: #b86b7a !important;
 }`,
-            morandi: `/* 🌊 莫兰迪灰蓝主题 */
-body { background-color: #f0f4f8 !important; }
-.bg-[#faf6f0] { background-color: #f0f4f8 !important; }
+            morandi_blue: `/* 🌊 莫兰迪海蓝清晨 */
+body {
+    background: linear-gradient(135deg, #f0f4f8 0%, #e2eaf1 100%) fixed !important;
+}
+.bg-[#faf6f0], main { background: transparent !important; }
+.bg-white, .ui-card {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
 .text-[#b86b7a], .text-[#d88c9a] { color: #5b7c99 !important; }
-.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] { background-color: #e2eaf1 !important; color: #4a6572 !important; }
-.border-[#f2e3e3], .border-[#f2dadc] { border-color: #cbd5e1 !important; }
-.ui-card:hover { border-color: #5b7c99 !important; }`,
-            sakura: `/* 🌸 暖粉和风纯美主题 */
-body { background-color: #fff8f8 !important; }
-.ui-card { border-color: #f7d6d8 !important; box-shadow: 0 4px 15px rgba(216, 140, 154, 0.08) !important; }
-.text-[#d88c9a] { color: #e06d88 !important; }`
+.bg-[#fdf6f7], .bg-[#fdf4f5], .bg-[#f8eeee] {
+    background: rgba(226, 234, 241, 0.85) !important;
+    color: #4a6572 !important;
+}`,
+            pearl_white: `/* 🍃 极简 Ins 珍珠透光 */
+body {
+    background: #fcfbfa !important;
+}
+.ui-card {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #f0eae5 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+}`
         };
 
         function toggleCustomCssCollapse() {
