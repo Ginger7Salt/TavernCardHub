@@ -1,3 +1,62 @@
+async function saveCardCustomUrl() {
+    if (!currentItem) return;
+    const input = document.getElementById('cardUrlInput');
+    const url = input ? input.value.trim() : '';
+    currentItem.cardUrl = url;
+    try {
+        await saveAsset(currentItem);
+        allAssetsCache = null;
+        showToast('🎉', url ? '关联网址保存成功！' : '已清空关联网址');
+    } catch(err) {
+        console.error(err);
+        showToast('❌', '保存网址失败');
+    }
+}
+window.saveCardCustomUrl = saveCardCustomUrl;
+
+function copyCurrentCardLink() {
+    if (!currentItem) return;
+    const customUrl = currentItem.cardUrl || '';
+    if (customUrl) {
+        navigator.clipboard.writeText(customUrl);
+        showToast('🔗', `已复制关联网址: ${customUrl}`);
+        return;
+    }
+    const text = currentItem.rawText || '';
+    const urls = text.match(/https?:\/\/[^\s"'<>]+/gi);
+    if (urls && urls.length) {
+        navigator.clipboard.writeText(urls[0]);
+        showToast('🔗', `已复制关联网址: ${urls[0]}`);
+    } else {
+        const fallbackUrl = window.location.href;
+        navigator.clipboard.writeText(fallbackUrl);
+        showToast('🔗', '已复制当前角色卡页面直链！');
+    }
+}
+window.copyCurrentCardLink = copyCurrentCardLink;
+
+function openCurrentCardLink() {
+    if (!currentItem) return;
+    const customUrl = currentItem.cardUrl || '';
+    if (customUrl) {
+        window.open(customUrl, '_blank');
+        showToast('🚀', `已跳转关联网址: ${customUrl}`);
+        return;
+    }
+    const text = currentItem.rawText || '';
+    const urls = text.match(/https?:\/\/[^\s"'<>]+/gi);
+    if (urls && urls.length) {
+        window.open(urls[0], '_blank');
+        showToast('🚀', `已跳转唤起: ${urls[0]}`);
+    } else {
+        showToast('⚠️', '请先在上方输入框填入并保存关联网址');
+    }
+}
+window.openCurrentCardLink = openCurrentCardLink;
+
+
+function toggleExtrasPanel() { const b = document.getElementById("extrasBody"); const c = document.getElementById("extrasChevron"); if (b) { b.classList.toggle("hidden"); if (c) c.textContent = b.classList.contains("hidden") ? "v" : "^"; } }
+window.toggleExtrasPanel = toggleExtrasPanel;
 
 window.getCleanAssetFilename = function(item) {
     if (!item) return 'theme_file.json';
@@ -146,21 +205,11 @@ if (fileIn) {
         function toggleCategoryImportPanel(){ const b=document.getElementById('categoryImportBody'); const c=document.getElementById('categoryImportChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
         window.toggleCategoryImportPanel=toggleCategoryImportPanel;
         function ensureCategoryImportUI() {
-            const list=document.getElementById('listView'); if (!list) return;
-            let box=document.getElementById('categoryImportBox');
-            if (!box) { box=document.createElement('div'); box.id='categoryImportBox'; box.className='mb-3'; list.insertBefore(box,list.firstChild); }
-            const tab=currentTab;
-            const disabled=['fonts','apikeys','links'];
-            if (disabled.includes(tab)) { box.innerHTML=''; box.classList.add('hidden'); return; }
-            box.classList.remove('hidden');
-            const labels={cards:'角色卡',worldbooks:'世界书',emojis:'表情包',regex:'正则/脚本',docs:'文档',gallery:'图库',themes:'美化包'};
-            const label=isCustomCategoryTab(tab) ? (customCategoryList.find(x=>x.id===tab)?.name || '自定义分类') : (labels[tab]||'当前分类');
-            box.innerHTML=`<div class="ui-card border border-[#dbeafe] bg-white/70 overflow-hidden"><button type="button" onclick="toggleCategoryImportPanel()" class="w-full px-3 py-2 flex items-center justify-between gap-2 text-left"><span class="text-xs font-bold text-[#2563eb]">📥 导入到「${label}」</span><span id="categoryImportChevron" class="text-[#60a5fa] text-xs">⌄</span></button><div id="categoryImportBody" class="hidden px-3 pb-3"><label class="inline-flex cursor-pointer px-3 py-1.5 rounded-lg bg-[#eff6ff] text-[#2563eb] text-xs font-bold">选择文件<input id="categoryFileInput" data-target-category="${tab}" type="file" multiple accept="*/*" class="hidden"></label><span class="ml-2 text-[10px] text-[#64748b]">支持任意文件格式</span></div></div>`;
-            const input=document.getElementById('categoryFileInput');
-            input.onchange=async e=>{ const lockedTarget=input.dataset.targetCategory || tab; try { for(const f of Array.from(e.target.files||[])) await processFile(f,lockedTarget); allAssetsCache=null; updateBadges(); await renderItems(); showToast('✅','文件已保存到当前分类'); } catch(err){ console.error(err); showToast('❌','导入失败，请检查文件格式'); } finally { input.value=''; } };
-        }
+    let box = document.getElementById('categoryImportBox');
+    if (box) { box.innerHTML = ''; box.classList.add('hidden'); }
+}
 
-        async function processFile(file, targetCategory = currentTab) {
+async function processFile(file, targetCategory = currentTab) {
             const ext=file.name.split('.').pop().toLowerCase();
             const id='asset_'+Date.now()+'_'+Math.random().toString(36).slice(2,11);
             const category=categoryStorageKey(targetCategory);
@@ -997,7 +1046,7 @@ if (fileIn) {
 
             
             // Category/Folder First View (Except emojis and fonts)
-            if (currentTab !== 'emojis' && currentTab !== 'fonts' && !isCustomCategoryTab(currentTab)) {
+            if (['cards', 'worldbooks', 'docs', 'regex'].includes(currentTab) || isCustomCategoryTab(currentTab)) {
                 if (!currentFolderOpened && !keyword) {
                     // Group by subCategory & Include empty custom folders
                     const folderCounts = {};
@@ -1018,23 +1067,35 @@ if (fileIn) {
                         folderCounts[fName] = (folderCounts[fName] || 0) + 1;
                     });
 
-                    // Add Create Folder Card
-                    const addCard = document.createElement('div');
-                    addCard.className = "ui-card p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] border-dashed border-[#f2dadc] bg-[#fdf6f7] transition active:scale-[0.98] min-h-[130px]";
-                    addCard.onclick = () => promptCreateFolder();
-                    addCard.innerHTML = `
-                        <div class="w-9 h-9 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center mb-1.5 shadow-sm">
-                            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                    // Add Create Folder Cards (并排小尺寸卡片按钮)
+                    const addGrid = document.createElement('div');
+                    addGrid.className = "col-span-full grid grid-cols-2 gap-3.5 mb-3";
+                    addGrid.innerHTML = `
+                        <div onclick="promptCreateFolder()" class="p-3.5 rounded-[22px] bg-white/80 backdrop-blur-md border border-white/70 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] shadow-2xs min-h-[90px]">
+                            <div class="w-8.5 h-8.5 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center mb-1 shadow-2xs">
+                                <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                            </div>
+                            <span class="font-bold text-xs text-[#b86b7a]">+ 创建新分类</span>
                         </div>
-                        <h3 class="font-bold text-xs text-[#b86b7a] text-center">+ 创建新分类</h3>
+                        <div onclick="triggerGlobalDirectImport()" class="p-3.5 rounded-[22px] bg-white/80 backdrop-blur-md border border-white/70 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] shadow-2xs min-h-[90px]">
+                            <div class="w-8.5 h-8.5 rounded-full bg-[#fff0f3] text-[#e11d48] flex items-center justify-center mb-1 shadow-2xs">
+                                <i data-lucide="inbox" class="w-4 h-4 text-[#e11d48]"></i>
+                            </div>
+                            <span class="font-bold text-xs text-[#e11d48]">${isCustomCategoryTab(currentTab) ? '📥 导入文件' : (currentTab === 'worldbooks' ? '📥 导入世界书' : (currentTab === 'docs' ? '📥 导入文档' : (currentTab === 'regex' ? '📥 导入正则/脚本' : '📥 导入角色卡')))}</span>
+                        </div>
                     `;
-                    container.appendChild(addCard);
+                    container.appendChild(addGrid);
 
                     // Render Folder Cards (竖版, 1排2列，支持长按整体删除)
-                    Object.keys(folderCounts).forEach(fName => {
+                    const sortedFolders = Object.keys(folderCounts).sort((a, b) => {
+                        if (a === '未分类') return 1;
+                        if (b === '未分类') return -1;
+                        return 0;
+                    });
+                    sortedFolders.forEach(fName => {
                         const cnt = folderCounts[fName];
                         const fCard = document.createElement('div');
-                        fCard.className = "px-3 py-1.5 rounded-full border border-[#f5e1e3] text-[#b86b7a] bg-white hover:border-[#b86b7a] flex items-center gap-2 cursor-pointer shadow-sm transition active:scale-95 relative select-none";
+                        fCard.className = "col-span-full w-full px-4 py-3.5 rounded-2xl bg-white/80 backdrop-blur-md border border-white/60 flex items-center justify-between shadow-2xs transition active:scale-[0.99] cursor-pointer relative select-none mb-2.5 min-h-[68px]";
                         
                         let folderLongPressTimer = null;
                         let isFolderLongPress = false;
@@ -1075,18 +1136,20 @@ if (fileIn) {
                             : '';
 
                         fCard.innerHTML = `
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="w-8 h-8 rounded-lg bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center">
-                                    <i data-lucide="folder" class="w-4 h-4"></i>
+                            <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                                <div class="w-9.5 h-9.5 rounded-2xl bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center shrink-0 shadow-2xs">
+                                    <i data-lucide="folder" class="w-4.5 h-4.5 text-[#d88c9a]"></i>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
-                                    ${deleteBtnHtml}
+                                <div class="flex flex-col min-w-0 flex-1 gap-0.5">
+                                    <div class="font-extrabold text-sm text-[#4a3e3d] truncate flex items-center gap-2">
+                                        <span>${fName}</span>
+                                        <span class="text-[10px] px-2 py-0.2 rounded-full bg-[#f8eeee] text-[#b86b7a] font-bold">${cnt} 项</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <h3 class="font-bold text-xs text-[#4a3e3d] truncate mb-0.5">📂 ${fName}</h3>
-                                <p class="text-[9px] text-[#a89294]">长按或点击右上角删除</p>
+                            <div class="flex items-center gap-2 shrink-0">
+                                ${deleteBtnHtml}
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-[#a89294]"></i>
                             </div>
                         `;
                         container.appendChild(fCard);
@@ -1099,17 +1162,17 @@ if (fileIn) {
                     filtered.length = 0;
                     folderItems.forEach(fi => filtered.push(fi));
 
-                    // Breadcrumb Header
+                    // Breadcrumb Header (最左上角极简粉色胶囊)
                     const breadcrumb = document.createElement('div');
-                    breadcrumb.className = "col-span-full flex items-center justify-between bg-[#fdf4f5] border border-[#f5e1e3] rounded-xl p-2 mb-1";
+                    breadcrumb.className = "col-span-full flex items-center justify-between bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-2.5 mb-2.5 shadow-2xs";
                     breadcrumb.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <button onclick="exitFolderView()" class="px-2.5 py-1 rounded-lg bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition flex items-center gap-1">
-                                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> 返回分类列表
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <button onclick="exitFolderView()" class="px-3 py-1.5 rounded-xl bg-[#d88c9a] text-white text-xs font-bold hover:bg-[#c97b8b] transition flex items-center gap-1 shrink-0 shadow-2xs active:scale-95">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i> 返回
                             </button>
-                            <span class="text-xs font-bold text-[#4a3e3d]">当前分类：📂 ${currentFolderOpened}</span>
+                            <span class="text-xs font-extrabold text-[#4a3e3d] truncate">📂 ${currentFolderOpened}</span>
                         </div>
-                        <button onclick="promptBatchMoveToFolder()" class="text-[11px] text-[#b86b7a] hover:underline font-semibold">+ 移动选中到新分类</button>
+                        <button onclick="promptBatchMoveToFolder()" class="text-[11px] text-[#b86b7a] hover:underline font-semibold shrink-0 ml-2">+ 移动选中</button>
                     `;
                     container.appendChild(breadcrumb);
                 }
@@ -1496,14 +1559,14 @@ if (fileIn) {
 
             if (item.category === 'cards') {
                 const btnWb = document.createElement('button'); btnWb.onclick = () => exportCardWorldbookFull(item);
-                btnWb.className = "px-2.5 py-1 rounded-full bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[11px] font-semibold transition flex items-center gap-1 border border-[#f5e1e3]"; btnWb.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出世界书`; container.insertBefore(btnWb, container.firstChild);
+                btnWb.className = "px-2 py-0.8 rounded-xl bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[10px] font-bold transition flex items-center gap-1 border border-[#f5e1e3] shrink-0"; btnWb.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出世界书`; container.insertBefore(btnWb, container.firstChild);
 
                 if (item.fileType === 'png' && item.rawBuffer) {
                     const btnPng = document.createElement('button'); btnPng.onclick = () => downloadBuffer(item.rawBuffer, `${item.name}.png`, 'image/png');
-                    btnPng.className = "px-2.5 py-1 rounded-full bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-[11px] font-semibold transition flex items-center gap-1"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
+                    btnPng.className = "px-2 py-0.8 rounded-xl bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
                 }
                 const btnJson = document.createElement('button'); btnJson.onclick = () => downloadText(item.rawText || JSON.stringify(item.cardData, null, 2), `${item.name}.json`, 'application/json');
-                btnJson.className = "px-2.5 py-1 rounded-full bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2] text-[11px] font-semibold transition flex items-center gap-1"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
+                btnJson.className = "px-2 py-0.8 rounded-xl bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
             }
             lucide.createIcons();
         }
@@ -2415,3 +2478,66 @@ window.toggleLinksPanel=toggleLinksPanel;
 
 function toggleThemeBuilderPanel(){ const b=document.getElementById('themeBuilderBody'); const c=document.getElementById('themeBuilderChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
 window.toggleThemeBuilderPanel=toggleThemeBuilderPanel;
+
+
+// 全局智能直连导入器
+function triggerGlobalDirectImport() {
+    if (currentTab === 'gallery') {
+        const g = document.getElementById('galleryFileInput');
+        if (g) { g.click(); return; }
+    }
+    if (currentTab === 'themes') {
+        const t = document.getElementById('themeFileInput');
+        if (t) { t.click(); return; }
+    }
+    let input = document.getElementById('globalDirectFileInput');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'file';
+        input.id = 'globalDirectFileInput';
+        input.multiple = true;
+        input.accept = '*/*';
+        input.className = 'hidden';
+        document.body.appendChild(input);
+        input.onchange = async (e) => {
+            const files = Array.from(e.target.files || []);
+            if (!files.length) return;
+            try {
+                showToast('⌛', `正在导入 ${files.length} 个文件...`);
+                for (const file of files) await processFile(file, currentTab);
+                allAssetsCache = null;
+                updateBadges();
+                await renderItems();
+                showToast('🎉', `成功存入当前分类！`);
+            } catch(err) {
+                console.error(err);
+                showToast('❌', '导入失败：' + (err.message || err));
+            } finally {
+                input.value = '';
+            }
+        };
+    }
+    input.click();
+}
+window.triggerGlobalDirectImport = triggerGlobalDirectImport;
+
+function promptCreateFolder() {
+    const folderName = prompt('请输入新分类名称：');
+    if (folderName && folderName.trim()) {
+        const cleanName = folderName.trim();
+        let customFolders = [];
+        try {
+            const saved = localStorage.getItem('TAVERN_CUSTOM_FOLDERS_' + currentTab);
+            if (saved) customFolders = JSON.parse(saved);
+        } catch(e){}
+        if (!Array.isArray(customFolders)) customFolders = [];
+        if (!customFolders.includes(cleanName)) {
+            customFolders.unshift(cleanName);
+            localStorage.setItem('TAVERN_CUSTOM_FOLDERS_' + currentTab, JSON.stringify(customFolders));
+        }
+        currentFolderOpened = null;
+        renderItems();
+        showToast('📂', `已成功创建新分类 “${cleanName}”！`);
+    }
+}
+window.promptCreateFolder = promptCreateFolder;
