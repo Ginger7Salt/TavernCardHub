@@ -130,7 +130,7 @@ function switchTab(tab, e) {
         if (themePanel) themePanel.classList.remove('hidden');
         renderItems();
     } else if (tab === 'links') {
-        if (linksPanel) linksPanel.classList.remove('hidden');
+        if (linksPanel) { linksPanel.classList.remove('hidden'); populateLinkCategorySelect(); }
         renderItems();
     } else {
         renderItems();
@@ -202,7 +202,7 @@ if (fileIn) {
         function isCustomCategoryTab(tab) { return typeof tab === 'string' && tab.indexOf('custom:') === 0; }
         function categoryStorageKey(tab) { return isCustomCategoryTab(tab) ? tab : tab; }
         function cleanImportName(name) { return name.replace(/(\.(json|css|txt|zip|docx|png))+$/gi, '').trim() || '未命名文件'; }
-        function toggleCategoryImportPanel(){ const b=document.getElementById('categoryImportBody'); const c=document.getElementById('categoryImportChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+        function toggleCategoryImportPanel(){ const b=document.getElementById('categoryImportBody'); const c=document.getElementById('categoryImportChevron'); if(b){ b.classList.toggle('hidden'); populateLinkCategorySelect(); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
         window.toggleCategoryImportPanel=toggleCategoryImportPanel;
         function ensureCategoryImportUI() {
     let box = document.getElementById('categoryImportBox');
@@ -213,30 +213,35 @@ async function processFile(file, targetCategory = currentTab) {
             const ext=file.name.split('.').pop().toLowerCase();
             const id='asset_'+Date.now()+'_'+Math.random().toString(36).slice(2,11);
             const category=categoryStorageKey(targetCategory);
+            const folder=currentFolderOpened || '';
             if (isCustomCategoryTab(category)) {
                 const raw=await file.arrayBuffer();
                 let preview='';
                 const textExts=['txt','css','json','html','htm','js','ts','xml','md','yaml','yml','csv','ini','log'];
                 if (textExts.includes(ext)) { try { preview=await file.text(); } catch(e) { preview=''; } }
-                await saveAsset({id, category, name:file.name, fileType:ext || 'bin', rawBuffer:raw, byteSize:raw.byteLength, rawText:preview, createdAt:Date.now()});
+                await saveAsset({id, category, subCategory:folder, name:file.name, fileType:ext || 'bin', rawBuffer:raw, byteSize:raw.byteLength, rawText:preview, createdAt:Date.now()});
                 return;
             }
-            if (ext==='png') {
-                if (category!=='cards') throw new Error('PNG 只能导入角色卡分类');
-                const raw=await file.arrayBuffer(); let cardData={}; const chunk=extractCharaChunk(raw);
+            if (ext==='png' || ext==='jpg' || ext==='jpeg' || ext==='webp' || ext==='gif') {
+                const raw=await file.arrayBuffer(); 
+                if (category==='gallery') {
+                    await saveAsset({id, category:'gallery', subCategory:folder, name:cleanImportName(file.name), fileType:ext, rawBuffer:raw, createdAt:Date.now()});
+                    return;
+                }
+                let cardData={}; const chunk=extractCharaChunk(raw);
                 if(chunk) { try { cardData=JSON.parse(chunk); } catch(e){} }
                 const d=cardData.data||cardData;
-                await saveAsset({id,category:'cards',name:d.name||cleanImportName(file.name),fileType:'png',rawBuffer:raw,cardData,tags:extractTagsFromData(d),firstMes:d.first_mes||'',alternateGreetings:d.alternate_greetings||[],personality:extractPersonalityDeep(cardData),worldbook:d.character_book||null,regexScripts:d.extensions?.regex_scripts||null,rawText:JSON.stringify(cardData,null,2),createdAt:Date.now()});
+                await saveAsset({id,category:'cards',subCategory:folder,name:d.name||cleanImportName(file.name),fileType:ext,rawBuffer:raw,cardData,tags:extractTagsFromData(d),firstMes:d.first_mes||'',alternateGreetings:d.alternate_greetings||[],personality:extractPersonalityDeep(cardData),worldbook:d.character_book||null,regexScripts:d.extensions?.regex_scripts||null,rawText:JSON.stringify(cardData,null,2),createdAt:Date.now()});
                 return;
             }
             if (ext==='json') {
                 const text=await file.text(); let json={}; try { json=JSON.parse(text); } catch(e){}
                 if (category==='cards') {
-                    const d=json.data||json; await saveAsset({id,category:'cards',name:d.name||cleanImportName(file.name),fileType:'json',cardData:json,tags:extractTagsFromData(d),rawText:text,personality:extractPersonalityDeep(json),worldbook:d.character_book||null,createdAt:Date.now()});
+                    const d=json.data||json; await saveAsset({id,category:'cards',subCategory:folder,name:d.name||cleanImportName(file.name),fileType:'json',cardData:json,tags:extractTagsFromData(d),rawText:text,personality:extractPersonalityDeep(json),worldbook:d.character_book||null,createdAt:Date.now()});
                 } else if (category==='worldbooks') {
-                    await saveAsset({id,category:'worldbooks',name:json.name||cleanImportName(file.name),fileType:'json',cardData:json,worldbook:json,rawText:text,createdAt:Date.now()});
+                    await saveAsset({id,category:'worldbooks',subCategory:folder,name:json.name||cleanImportName(file.name),fileType:'json',cardData:json,worldbook:json,rawText:text,createdAt:Date.now()});
                 } else {
-                    await saveAsset({id,category,name:cleanImportName(file.name),fileType:'json',cardData:json,rawText:text,createdAt:Date.now()});
+                    await saveAsset({id,category,subCategory:folder,name:cleanImportName(file.name),fileType:'json',cardData:json,rawText:text,createdAt:Date.now()});
                 }
                 return;
             }
@@ -244,18 +249,18 @@ async function processFile(file, targetCategory = currentTab) {
                 const text=await file.text();
                 if (category==='emojis') {
                     const parsed=parseEmojiTextLines(text); if(!parsed.length) throw new Error('没有识别到表情链接');
-                    await saveAsset({id,category:'emojis',name:cleanImportName(file.name),fileType:'json',emojiList:parsed,rawText:text,createdAt:Date.now()});
+                    await saveAsset({id,category:'emojis',subCategory:folder,name:cleanImportName(file.name),fileType:'json',emojiList:parsed,rawText:text,createdAt:Date.now()});
                 } else {
-                    await saveAsset({id,category,name:cleanImportName(file.name),fileType:ext,rawText:text,createdAt:Date.now()});
+                    await saveAsset({id,category,subCategory:folder,name:cleanImportName(file.name),fileType:ext,rawText:text,createdAt:Date.now()});
                 }
                 return;
             }
             if (ext==='docx') {
                 const raw=await file.arrayBuffer(); const result=await mammoth.extractRawText({arrayBuffer:raw});
-                await saveAsset({id,category,name:cleanImportName(file.name),fileType:'docx',rawText:result.value,rawBuffer:raw,createdAt:Date.now()}); return;
+                await saveAsset({id,category,subCategory:folder,name:cleanImportName(file.name),fileType:'docx',rawText:result.value,rawBuffer:raw,createdAt:Date.now()}); return;
             }
             if (ext==='zip') {
-                const raw=await file.arrayBuffer(); await saveAsset({id,category,name:cleanImportName(file.name),fileType:'zip',rawBuffer:raw,createdAt:Date.now()}); return;
+                const raw=await file.arrayBuffer(); await saveAsset({id,category,subCategory:folder,name:cleanImportName(file.name),fileType:'zip',rawBuffer:raw,createdAt:Date.now()}); return;
             }
             throw new Error('不支持的文件格式');
         }
@@ -323,6 +328,7 @@ async function processFile(file, targetCategory = currentTab) {
                 const blob = new Blob([item.rawBuffer], { type: item.fileType || 'image/png' });
                 return URL.createObjectURL(blob);
             }
+            if (item.url) return item.url;
             return item.cover || item.rawText || '';
         }
 
@@ -749,7 +755,7 @@ async function processFile(file, targetCategory = currentTab) {
 
         function tokTrim(t) { return String(t).trim(); }
 
-        function promptAddCustomTag() {
+        async function promptAddCustomTag() {
             if (!currentItem) return;
             const newTag = prompt('请输入新标签名字：');
             if (newTag && newTag.trim()) {
@@ -757,7 +763,7 @@ async function processFile(file, targetCategory = currentTab) {
                 currentItem.tags = currentItem.tags || [];
                 if (!currentItem.tags.includes(tagStr)) {
                     currentItem.tags.push(tagStr);
-                    saveAsset(currentItem);
+                    await saveAsset(currentItem);
                     renderOverviewTags();
                     renderTagFilterBar();
                     showToast('🏷️', `已成功添加标签 “${tagStr}”`);
@@ -910,6 +916,8 @@ async function processFile(file, targetCategory = currentTab) {
                 showToast('⚠️', '请先选择本地图片'); 
                 return; 
             }
+window.saveLocalGalleryPictures = saveLocalGalleryPictures;
+
 
             isGallerySaving = true;
             try {
@@ -949,6 +957,8 @@ async function processFile(file, targetCategory = currentTab) {
             const titleInput = document.getElementById('galleryTitleInput');
             const url = urlInput?.value.trim() || '';
             if (!/^https?:\/\//i.test(url)) { showToast('⚠️', '请填写有效的图片链接'); return; }
+window.saveGalleryUrl = saveGalleryUrl;
+
             
             isGalleryUrlSaving = true;
             try {
@@ -961,6 +971,7 @@ async function processFile(file, targetCategory = currentTab) {
                     category: 'gallery', 
                     name: nameText, 
                     fileType: 'img', 
+                    url: url,
                     rawText: url, 
                     subCategory: currentFolderOpened || '', 
                     createdAt: Date.now()
@@ -978,7 +989,6 @@ async function processFile(file, targetCategory = currentTab) {
             }
         }
         async function renderItems() {
-    renderDocDrawerImportUI();
             const assets = await getAllAssets(), keyword = document.getElementById('searchInput').value.toLowerCase().trim(), container = document.getElementById('itemsContainer');
             container.innerHTML = '';
 
@@ -994,20 +1004,26 @@ async function processFile(file, targetCategory = currentTab) {
             
             if (currentTab === 'emojis') { 
                 builderPanel.classList.remove('hidden'); 
-                extrasPanel.classList.add('hidden');
-                galleryPanel.classList.add('hidden');
+                if (extrasPanel) extrasPanel.classList.add('hidden');
+                if (galleryPanel) galleryPanel.classList.add('hidden');
             } else if (currentTab === 'regex') {
                 builderPanel.classList.add('hidden'); 
-                extrasPanel.classList.remove('hidden');
-                galleryPanel.classList.add('hidden');
+                if (extrasPanel) extrasPanel.classList.add('hidden'); // 强制隐藏极细折叠手账卡片，保持与文本文档纯净一致
+                if (galleryPanel) galleryPanel.classList.add('hidden');
             } else if (currentTab === 'gallery') {
                 builderPanel.classList.add('hidden'); 
                 extrasPanel.classList.add('hidden');
-                galleryPanel.classList.remove('hidden');
+                if (galleryPanel) {
+                    if (currentFolderOpened) {
+                        galleryPanel.classList.add('hidden');
+                    } else {
+                        galleryPanel.classList.remove('hidden');
+                    }
+                }
             } else { 
                 builderPanel.classList.add('hidden'); 
                 extrasPanel.classList.add('hidden');
-                galleryPanel.classList.add('hidden');
+                if (galleryPanel) galleryPanel.classList.add('hidden');
             }
 
             const filtered = assets.filter(a => {
@@ -1037,16 +1053,16 @@ async function processFile(file, targetCategory = currentTab) {
                 return nameMatch || tagMatch || textMatch || personalityMatch || wbMatch;
             });
             // document.getElementById('itemCountText').innerText
-            // 如果是在子文件夹内部且为空，提示暂无资产
-            if (filtered.length === 0 && (currentFolderOpened || keyword || currentTab === 'emojis' || currentTab === 'fonts')) { 
+            // 如果是在子文件夹内部且为空，允许渲染顶部的面包屑导航与导入按钮
+            if (filtered.length === 0 && !currentFolderOpened && (keyword || currentTab === 'emojis' || currentTab === 'fonts')) { 
                 container.innerHTML = `<div class="col-span-full py-20 text-center text-[#b89b9d]"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-xs">暂无资产</p></div>`; 
                 lucide.createIcons(); 
                 return; 
             }
 
             
-            // Category/Folder First View (Except emojis and fonts)
-            if (['cards', 'worldbooks', 'docs', 'regex'].includes(currentTab) || isCustomCategoryTab(currentTab)) {
+            // Category/Folder First View (Except fonts)
+            if (['cards', 'worldbooks', 'docs', 'regex', 'gallery', 'links', 'emojis'].includes(currentTab) || isCustomCategoryTab(currentTab)) {
                 if (!currentFolderOpened && !keyword) {
                     // Group by subCategory & Include empty custom folders
                     const folderCounts = {};
@@ -1067,21 +1083,15 @@ async function processFile(file, targetCategory = currentTab) {
                         folderCounts[fName] = (folderCounts[fName] || 0) + 1;
                     });
 
-                    // Add Create Folder Cards (并排小尺寸卡片按钮)
+                    // Add Create Folder Cards (只保留一个“+ 创建新分类”单卡片)
                     const addGrid = document.createElement('div');
-                    addGrid.className = "col-span-full grid grid-cols-2 gap-3.5 mb-3";
+                    addGrid.className = "col-span-full mb-3";
                     addGrid.innerHTML = `
-                        <div onclick="promptCreateFolder()" class="p-3.5 rounded-[22px] bg-white/80 backdrop-blur-md border border-white/70 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] shadow-2xs min-h-[90px]">
-                            <div class="w-8.5 h-8.5 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center mb-1 shadow-2xs">
+                        <div onclick="promptCreateFolder()" class="w-full p-3 rounded-[22px] bg-white/80 backdrop-blur-md border border-white/70 flex items-center justify-center gap-2 cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] shadow-2xs min-h-[50px]">
+                            <div class="w-7 h-7 rounded-full bg-[#f8eeee] text-[#d88c9a] flex items-center justify-center shadow-2xs">
                                 <i data-lucide="folder-plus" class="w-4 h-4"></i>
                             </div>
                             <span class="font-bold text-xs text-[#b86b7a]">+ 创建新分类</span>
-                        </div>
-                        <div onclick="triggerGlobalDirectImport()" class="p-3.5 rounded-[22px] bg-white/80 backdrop-blur-md border border-white/70 flex flex-col items-center justify-center cursor-pointer hover:border-[#d88c9a] transition active:scale-[0.98] shadow-2xs min-h-[90px]">
-                            <div class="w-8.5 h-8.5 rounded-full bg-[#fff0f3] text-[#e11d48] flex items-center justify-center mb-1 shadow-2xs">
-                                <i data-lucide="inbox" class="w-4 h-4 text-[#e11d48]"></i>
-                            </div>
-                            <span class="font-bold text-xs text-[#e11d48]">${isCustomCategoryTab(currentTab) ? '📥 导入文件' : (currentTab === 'worldbooks' ? '📥 导入世界书' : (currentTab === 'docs' ? '📥 导入文档' : (currentTab === 'regex' ? '📥 导入正则/脚本' : '📥 导入角色卡')))}</span>
                         </div>
                     `;
                     container.appendChild(addGrid);
@@ -1162,17 +1172,53 @@ async function processFile(file, targetCategory = currentTab) {
                     filtered.length = 0;
                     folderItems.forEach(fi => filtered.push(fi));
 
-                    // Breadcrumb Header (最左上角极简粉色胶囊)
+                    // Breadcrumb Header (单排紧凑模式：左侧返回+文件夹名，右侧直接显示“📥 导入”按钮)
                     const breadcrumb = document.createElement('div');
-                    breadcrumb.className = "col-span-full flex items-center justify-between bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-2.5 mb-2.5 shadow-2xs";
-                    breadcrumb.innerHTML = `
-                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                            <button onclick="exitFolderView()" class="px-3 py-1.5 rounded-xl bg-[#d88c9a] text-white text-xs font-bold hover:bg-[#c97b8b] transition flex items-center gap-1 shrink-0 shadow-2xs active:scale-95">
-                                <i data-lucide="chevron-left" class="w-4 h-4"></i> 返回
+                    breadcrumb.className = "col-span-full flex items-center justify-between bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-2.5 mb-2.5 shadow-2xs gap-2";
+                    
+                    let importBtnText = '📥 导入文件';
+                    if (currentTab === 'cards') importBtnText = '📥 导入角色卡';
+                    else if (currentTab === 'worldbooks') importBtnText = '📥 导入世界书';
+                    else if (currentTab === 'docs') importBtnText = '📥 导入文档';
+                    else if (currentTab === 'regex') importBtnText = '📥 导入';
+                    else if (currentTab === 'emojis') importBtnText = '📥 导入表情包';
+
+                    let rightButtonsHtml = `
+                        <button onclick="triggerGlobalDirectImport()" class="px-3 py-1.5 rounded-xl bg-[#fff0f3] border border-[#f2dadc] text-[#e11d48] text-xs font-bold hover:bg-[#ffe4e6] transition flex items-center gap-1 shadow-2xs active:scale-95 shrink-0">
+                            ${importBtnText}
+                        </button>
+                    `;
+if (currentTab === 'docs' || currentTab === 'regex') {
+                        rightButtonsHtml = `
+                            <button onclick="triggerDocPasteModalPrompt()" class="px-2 py-1.5 rounded-xl bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] text-[11px] font-bold hover:bg-[#f8eeee] transition flex items-center gap-0.5 shadow-2xs active:scale-95 shrink-0 whitespace-nowrap">
+                                ✏️ 粘贴草稿
                             </button>
-                            <span class="text-xs font-extrabold text-[#4a3e3d] truncate">📂 ${currentFolderOpened}</span>
+                            <button onclick="triggerGlobalDirectImport()" class="px-2 py-1.5 rounded-xl bg-[#fff0f3] border border-[#f2dadc] text-[#e11d48] text-[11px] font-bold hover:bg-[#ffe4e6] transition flex items-center gap-0.5 shadow-2xs active:scale-95 shrink-0 whitespace-nowrap">
+                                ${importBtnText}
+                            </button>
+                        `;
+                    } else if (currentTab === 'gallery') {
+                        rightButtonsHtml = `
+                            <button onclick="triggerGalleryLinkInputPrompt()" class="px-2 py-1.5 rounded-xl bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] text-[11px] font-bold hover:bg-[#f8eeee] transition flex items-center gap-0.5 shadow-2xs active:scale-95 shrink-0 whitespace-nowrap">
+                                🔗 粘贴直链
+                            </button>
+                            <button onclick="triggerGlobalDirectImport()" class="px-2 py-1.5 rounded-xl bg-[#fff0f3] border border-[#f2dadc] text-[#e11d48] text-[11px] font-bold hover:bg-[#ffe4e6] transition flex items-center gap-0.5 shadow-2xs active:scale-95 shrink-0 whitespace-nowrap">
+                                📥 上传图片
+                            </button>
+                        `;
+                    }
+
+                    breadcrumb.innerHTML = `
+                        <div class="flex items-center gap-1 min-w-0 shrink">
+                            <button onclick="exitFolderView()" class="px-2 py-1 rounded-xl bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition flex items-center gap-0.5 shrink-0 shadow-2xs active:scale-95">
+                                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> 返回
+                            </button>
+                            <span class="text-[11px] font-extrabold text-[#4a3e3d] truncate hidden sm:inline-block">📂 ${currentFolderOpened}</span>
                         </div>
-                        <button onclick="promptBatchMoveToFolder()" class="text-[11px] text-[#b86b7a] hover:underline font-semibold shrink-0 ml-2">+ 移动选中</button>
+                        <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+                            ${rightButtonsHtml}
+                            <button onclick="promptBatchMoveToFolder()" class="text-[10px] text-[#b86b7a] hover:underline font-semibold shrink-0 ml-0.5 whitespace-nowrap">+移动</button>
+                        </div>
                     `;
                     container.appendChild(breadcrumb);
                 }
@@ -1221,6 +1267,9 @@ async function processFile(file, targetCategory = currentTab) {
                             <button onclick="navigator.clipboard.writeText('${linkUrl}'); showToast('📋', '链接已复制！');" class="px-3 py-2 rounded-xl bg-[#eff6ff] text-[#475569] hover:bg-[#e2e8f0] text-[11px] font-bold transition">
                                 📋 复制
                             </button>
+                            <button onclick="event.stopPropagation(); currentItem = item; promptAddCustomTag();" class="px-3 py-2 rounded-xl bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[11px] font-bold transition">
+                                🏷️ 标签
+                            </button>
                             <button onclick="deleteSingleAsset('${item.id}', event)" class="px-3 py-2 rounded-xl bg-[#fff1f2] text-[#ef4444] hover:bg-[#fee2e2] text-[11px] font-bold transition">
                                 🗑️
                             </button>
@@ -1234,7 +1283,7 @@ async function processFile(file, targetCategory = currentTab) {
                             <img src="${imgUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.src='https://placehold.co/300x400/fdf4f5/d88c9a?text=图片加载失败'">
                         </div>
                         <div>
-                            <h3 class="font-bold text-xs text-[#4a3e3d] text-center truncate px-0.5">${item.name}</h3>
+                            <h3 class="font-bold text-xs text-[#4a3e3d] text-center truncate px-0.5">${item.name}</h3>${item.tags && item.tags.length > 0 ? `<div class="flex items-center justify-center gap-1 flex-wrap pt-0.5">${item.tags.slice(0, 2).map(t => `<span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f8eeee] text-[#b86b7a] font-medium">🏷️ ${t}</span>`).join('')}</div>` : ''}
                         </div>
                     `;
                 } else if (currentTab === 'emojis') {
@@ -1275,6 +1324,7 @@ async function processFile(file, targetCategory = currentTab) {
 
                 container.appendChild(card);
             });
+
             lucide.createIcons();
         }
 
@@ -1305,6 +1355,7 @@ async function processFile(file, targetCategory = currentTab) {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('worldbook');
                 selectedWbEntryIndexes.clear();
+                renderOverviewTags();
                 renderWorldbookEntries();
                 return;
             }
@@ -1313,9 +1364,10 @@ async function processFile(file, targetCategory = currentTab) {
             if (item.category === 'regex') {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
                 switchDetailTab('doc-full');
-                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-[#7a9bb8]"></i><span>番外/小剧场 内容</span>`;
-                document.getElementById('docFullContentText').innerText = item.rawText || '无内容';
-                lucide.createIcons();
+                const textarea = document.getElementById('docFullContentTextarea');
+                if (textarea) textarea.value = item.rawText || '无番外/小剧场内容';
+                renderOverviewTags();
+                renderDocVersionSelectOptions();
                 return;
             }
 
@@ -1407,12 +1459,34 @@ async function processFile(file, targetCategory = currentTab) {
 
             if (item.category === 'gallery') {
                 document.getElementById('secondaryPillsBar').classList.add('hidden');
-                switchDetailTab('doc-full');
+                switchDetailTab('theme-standalone');
                 const imgUrl = getAssetImageUrl(item);
-                document.getElementById('docFullTitle').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i><span>图库大图预览</span>`;
-                document.getElementById('docFullContentText').innerHTML = `
-                    <div class="flex flex-col items-center gap-3 py-2">
-                        <img src="${imgUrl}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[70vh] object-contain">
+                const container = document.getElementById('subview-theme-standalone');
+                container.innerHTML = `
+                    <div class="w-full space-y-3 pt-1">
+                        <div class="w-full bg-white/90 rounded-2xl p-4 border border-[#f2dadc] shadow-xs space-y-3 text-center">
+                            <div class="flex items-center justify-between gap-2 border-b border-[#f5e1e3] pb-2">
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-[#b86b7a]">
+                                    <i data-lucide="image" class="w-4 h-4 text-[#d88c9a]"></i>
+                                    <span>图库大图预览</span>
+                                </div>
+                                <button type="button" onclick="renameCurrentItem()" class="px-3 py-1 rounded-full bg-[#fdf4f5] border border-[#f2dadc] text-[#b86b7a] text-xs font-bold hover:bg-[#f2dadc] transition flex items-center gap-1 shrink-0">
+                                    ✏️ 修改名字
+                                </button>
+                            </div>
+                            <div class="text-sm font-bold text-[#4a3e3d] truncate pt-1">${item.name}</div>
+                            <div class="flex justify-center py-2">
+                                <img src="${imgUrl}" class="max-w-full rounded-2xl shadow-md border border-[#f5e1e3] max-h-[65vh] object-contain">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2.5 pt-2">
+                                <button type="button" onclick="const a = document.createElement('a'); a.href='${imgUrl}'; a.download='${item.name}.png'; a.click();" class="w-full py-2.5 rounded-xl bg-[#d88c9a] text-white font-bold text-xs shadow-xs hover:bg-[#c97b8b] transition">
+                                    📥 保存原图
+                                </button>
+                                <button type="button" onclick="deleteCurrentItem()" class="w-full py-2.5 rounded-xl bg-[#f5e1e3] text-[#c95368] font-bold text-xs hover:bg-[#f0cfd3] transition">
+                                    🗑️ 删除图片
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `;
                 lucide.createIcons();
@@ -1428,7 +1502,18 @@ async function processFile(file, targetCategory = currentTab) {
                 return;
             }
 
-            if (item.category === 'docs') { document.getElementById('secondaryPillsBar').classList.add('hidden'); switchDetailTab('doc-full'); document.getElementById('docFullContentText').innerText = item.rawText || '无内容'; return; }
+            // 如果卡片格式是 docx 或 txt 文本类型（或者非 JSON/PNG 深度解析的角色卡/世界书/番外），直接切换到文档全文模式，不显示人设世界书等 Tab
+            const ext = (item.fileType || '').toLowerCase();
+            const isDeepCard = (item.category === 'cards') && item.cardData && (item.cardData.data || item.cardData.name || item.cardData.spec);
+            if (ext === 'docx' || ext === 'doc' || ext === 'txt' || item.category === 'docs' || item.category === 'regex' || !isDeepCard) {
+                document.getElementById('secondaryPillsBar').classList.add('hidden');
+                switchDetailTab('doc-full');
+                const textarea = document.getElementById('docFullContentTextarea');
+                if (textarea) textarea.value = item.rawText || '无文档/DOCX文本内容';
+                renderOverviewTags();
+                renderDocVersionSelectOptions();
+                return;
+            }
             
             document.getElementById('secondaryPillsBar').classList.remove('hidden');
             let pText = item.personality || extractPersonalityDeep(item.cardData || {});
@@ -1558,15 +1643,38 @@ async function processFile(file, targetCategory = currentTab) {
             }
 
             if (item.category === 'cards') {
-                const btnWb = document.createElement('button'); btnWb.onclick = () => exportCardWorldbookFull(item);
-                btnWb.className = "px-2 py-0.8 rounded-xl bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[10px] font-bold transition flex items-center gap-1 border border-[#f5e1e3] shrink-0"; btnWb.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出世界书`; container.insertBefore(btnWb, container.firstChild);
+                const ext = (item.fileType || '').toLowerCase();
+                const isDeepCard = item.cardData && (item.cardData.data || item.cardData.name || item.cardData.spec);
+                if (ext === 'docx' || ext === 'doc' || ext === 'txt' || !isDeepCard) {
+                    const btnTxt = document.createElement('button'); btnTxt.onclick = () => downloadText(item.rawText || '', `${item.name}.txt`, 'text/plain');
+                    btnTxt.className = "px-2 py-0.8 rounded-xl bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[10px] font-bold transition flex items-center gap-1 border border-[#f5e1e3] shrink-0"; btnTxt.innerHTML = `<i data-lucide="file-text" class="w-3 h-3"></i> 导出TXT`; container.insertBefore(btnTxt, container.firstChild);
 
-                if (item.fileType === 'png' && item.rawBuffer) {
-                    const btnPng = document.createElement('button'); btnPng.onclick = () => downloadBuffer(item.rawBuffer, `${item.name}.png`, 'image/png');
-                    btnPng.className = "px-2 py-0.8 rounded-xl bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
+                    const btnDocx = document.createElement('button'); btnDocx.onclick = () => {
+                        const docxContent = `
+                            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                            <head><meta charset='utf-8'><title>${item.name}</title></head>
+                            <body>
+                                <h2>${item.name}</h2>
+                                <hr/>
+                                <pre style="font-family: sans-serif; font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${(item.rawText || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                            </body>
+                            </html>
+                        `;
+                        downloadText(docxContent, `${item.name}.docx`, 'application/vnd.ms-word');
+                        showToast('📘', '已成功导出 DOCX！');
+                    };
+                    btnDocx.className = "px-2 py-0.8 rounded-xl bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnDocx.innerHTML = `<i data-lucide="file" class="w-3 h-3"></i> 导出DOCX`; container.insertBefore(btnDocx, container.firstChild);
+                } else {
+                    const btnWb = document.createElement('button'); btnWb.onclick = () => exportCardWorldbookFull(item);
+                    btnWb.className = "px-2 py-0.8 rounded-xl bg-[#fdf4f5] text-[#b86b7a] hover:bg-[#f8eeee] text-[10px] font-bold transition flex items-center gap-1 border border-[#f5e1e3] shrink-0"; btnWb.innerHTML = `<i data-lucide="book-open" class="w-3 h-3"></i> 导出世界书`; container.insertBefore(btnWb, container.firstChild);
+
+                    if (item.fileType === 'png' && item.rawBuffer) {
+                        const btnPng = document.createElement('button'); btnPng.onclick = () => downloadBuffer(item.rawBuffer, `${item.name}.png`, 'image/png');
+                        btnPng.className = "px-2 py-0.8 rounded-xl bg-[#f8eeee] text-[#b86b7a] hover:bg-[#f5e1e3] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnPng.innerHTML = `<i data-lucide="image" class="w-3 h-3"></i> 导出原卡PNG`; container.insertBefore(btnPng, container.firstChild);
+                    }
+                    const btnJson = document.createElement('button'); btnJson.onclick = () => downloadText(item.rawText || JSON.stringify(item.cardData, null, 2), `${item.name}.json`, 'application/json');
+                    btnJson.className = "px-2 py-0.8 rounded-xl bg-[#e8f8f0] text-[#5b8a7f] hover:bg-[#d8ebe5] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
                 }
-                const btnJson = document.createElement('button'); btnJson.onclick = () => downloadText(item.rawText || JSON.stringify(item.cardData, null, 2), `${item.name}.json`, 'application/json');
-                btnJson.className = "px-2 py-0.8 rounded-xl bg-[#e8f0f8] text-[#688ca6] hover:bg-[#d8e4f2] text-[10px] font-bold transition flex items-center gap-1 shrink-0"; btnJson.innerHTML = `<i data-lucide="file-json" class="w-3 h-3"></i> 导出JSON`; container.insertBefore(btnJson, container.firstChild);
             }
             lucide.createIcons();
         }
@@ -2000,64 +2108,11 @@ window.batchMoveSelectedCategory = batchMoveSelectedCategory;
 
 function renderDocDrawerImportUI() {
     let container = document.getElementById('docDrawerContainer');
-    if (currentTab !== 'docs' || !currentFolderOpened) {
-        if (container) container.remove();
-        return;
-    }
-
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'docDrawerContainer';
-        container.className = 'my-2 bg-white rounded-2xl border border-[#f2e3e3] p-2.5 shadow-2xs space-y-2';
-        
-        const itemsContainer = document.getElementById('itemsContainer');
-        if (itemsContainer && itemsContainer.parentNode) {
-            itemsContainer.parentNode.insertBefore(container, itemsContainer);
-        } else {
-            document.body.appendChild(container);
-        }
-    }
-
-    const bodyWasOpen = document.getElementById('docImportDrawerBody') ? !document.getElementById('docImportDrawerBody').classList.contains('hidden') : false;
-
-    container.innerHTML = `
-        <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-[#4a3e3d] flex items-center gap-1.5">
-                <span>📄</span> 复制文本导入文档
-            </span>
-            <button onclick="toggleDocImportDrawer()" class="text-[11px] font-bold text-[#d88c9a] bg-[#f8eeee] px-2.5 py-1 rounded-full hover:bg-[#f2dadc] transition flex items-center gap-1 shadow-xs">
-                <span id="docDrawerToggleIcon">✏️ 新建/粘贴</span>
-            </button>
-        </div>
-
-        <div id="docImportDrawerBody" class="${bodyWasOpen ? '' : 'hidden'} pt-2 border-t border-[#f7ecee] space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div>
-                <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">文档标题</label>
-                <input id="docImportTitleInput" type="text" placeholder="例: 小说角色大纲 / 章节草稿" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-lg px-2.5 py-1.5 text-xs text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a]">
-            </div>
-            <div>
-                <label class="block text-[10px] font-semibold text-[#8c7476] mb-0.5">粘贴文档内容</label>
-                <textarea id="docImportTextContent" placeholder="在此直接粘贴剪贴板复制的长篇文本..." class="w-full h-28 bg-[#faf6f0] border border-[#f2e3e3] rounded-lg p-2.5 text-xs font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] custom-scrollbar resize-none"></textarea>
-            </div>
-            <div class="flex justify-end gap-2 pt-1">
-                <button onclick="toggleDocImportDrawer(false)" class="px-3 py-1 rounded-full border border-gray-300 text-gray-600 text-[11px]">取消</button>
-                <button onclick="submitSavePastedDoc()" class="px-4 py-1 rounded-full bg-[#d88c9a] text-white text-[11px] font-bold hover:bg-[#c97b8b] transition shadow-sm">保存文档</button>
-            </div>
-        </div>
-    `;
-    container.classList.remove('hidden');
+    if (container) container.remove();
 }
 
 function toggleDocImportDrawer(show = null) {
-    const body = document.getElementById('docImportDrawerBody');
-    if (!body) return;
-    if (show === null) {
-        body.classList.toggle('hidden');
-    } else if (show) {
-        body.classList.remove('hidden');
-    } else {
-        body.classList.add('hidden');
-    }
+    // 兼容原有的代码逻辑为空函数，避免之前旧代码调用报错。
 }
 
 async function submitSavePastedDoc() {
@@ -2076,11 +2131,12 @@ async function submitSavePastedDoc() {
     const assetId = 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 
     try {
-        showToast('⌛', '正在保存文档...');
+        showToast('⌛', '正在保存...');
+        const saveCategory = (currentTab === 'regex') ? 'regex' : 'docs';
         await saveAsset({
             id: assetId,
-            category: 'docs',
-            name: docName.endsWith('.txt') ? docName : `${docName}.txt`,
+            category: saveCategory,
+            name: docName,
             fileType: 'txt',
             rawText: content,
             subCategory: currentFolderOpened || '',
@@ -2094,10 +2150,10 @@ async function submitSavePastedDoc() {
         allAssetsCache = null;
         updateBadges();
         await renderItems();
-        showToast('🎉', `文档 “${docName}” 已成功存入！`);
-    } catch(err) {
-        console.error('Failed to save pasted doc', err);
-        showToast('❌', '保存文档失败');
+        showToast('🎉', saveCategory === 'regex' ? '已保存至当前番外/小剧场文件夹！' : '已保存至当前文本文档文件夹！');
+    } catch (e) {
+        console.error(e);
+        showToast('❌', '保存失败');
     }
 }
 
@@ -2418,6 +2474,19 @@ async function saveNewLinkAsset() {
         createdAt: Date.now()
     };
 
+    
+    if (subCat) {
+        let customFolders = [];
+        try {
+            const saved = localStorage.getItem('TAVERN_CUSTOM_FOLDERS_links');
+            if (saved) customFolders = JSON.parse(saved);
+        } catch(e){}
+        if (!customFolders.includes(subCat)) {
+            customFolders.unshift(subCat);
+            localStorage.setItem('TAVERN_CUSTOM_FOLDERS_links', JSON.stringify(customFolders));
+        }
+    }
+
     await saveAsset(asset);
     if (titleInput) titleInput.value = '';
     if (urlInput) urlInput.value = '';
@@ -2473,18 +2542,86 @@ document.addEventListener('DOMContentLoaded', () => {
 async function pasteLinkFromClipboard(){ try { const t=await navigator.clipboard.readText(); const el=document.getElementById('linkUrlInput'); if(el) el.value=t.trim(); } catch(e){ showToast('⚠️','请允许读取剪贴板'); } }
 window.pasteLinkFromClipboard=pasteLinkFromClipboard;
 
-function toggleLinksPanel(){ const b=document.getElementById('linksPanelBody'); const c=document.getElementById('linksPanelChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+
+function populateLinkCategorySelect() {
+    const sel = document.getElementById('linkCategorySelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">一键选择已有分类...</option>';
+    let customFolders = [];
+    try {
+        const saved = localStorage.getItem('TAVERN_CUSTOM_FOLDERS_links');
+        if (saved) customFolders = JSON.parse(saved);
+    } catch(e){}
+    if (Array.isArray(customFolders)) {
+        customFolders.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.innerText = f;
+            sel.appendChild(opt);
+        });
+    }
+}
+window.populateLinkCategorySelect = populateLinkCategorySelect;
+
+function toggleLinksPanel(){ const b=document.getElementById('linksPanelBody'); const c=document.getElementById('linksPanelChevron'); if(b){ b.classList.toggle('hidden'); populateLinkCategorySelect(); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
 window.toggleLinksPanel=toggleLinksPanel;
 
-function toggleThemeBuilderPanel(){ const b=document.getElementById('themeBuilderBody'); const c=document.getElementById('themeBuilderChevron'); if(b){ b.classList.toggle('hidden'); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
+function toggleThemeBuilderPanel(){ const b=document.getElementById('themeBuilderBody'); const c=document.getElementById('themeBuilderChevron'); if(b){ b.classList.toggle('hidden'); populateLinkCategorySelect(); if(c)c.textContent=b.classList.contains('hidden')?'⌄':'⌃'; } }
 window.toggleThemeBuilderPanel=toggleThemeBuilderPanel;
 
 
 // 全局智能直连导入器
 function triggerGlobalDirectImport() {
+    if (currentTab === 'links') {
+        const linkInput = document.getElementById('linkUrlInput');
+        if (linkInput) {
+            linkInput.focus();
+            linkInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        showToast('🔗', '请在上方粘贴框输入或粘贴网址链接');
+        return;
+    }
     if (currentTab === 'gallery') {
-        const g = document.getElementById('galleryFileInput');
-        if (g) { g.click(); return; }
+        let gInput = document.getElementById('galleryDirectFileInput');
+        if (!gInput) {
+            gInput = document.createElement('input');
+            gInput.type = 'file';
+            gInput.id = 'galleryDirectFileInput';
+            gInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
+            gInput.multiple = true;
+            gInput.className = 'hidden';
+            document.body.appendChild(gInput);
+            gInput.onchange = async (e) => {
+                const files = Array.from(e.target.files || []);
+                if (!files.length) return;
+                try {
+                    showToast('⌛', `正在上传 ${files.length} 张图片...`);
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const name = file.name.replace(/\.[^/.]+$/, '') || `图片_${Date.now()}`;
+                        await saveAsset({
+                            id: 'asset_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 7),
+                            category: 'gallery',
+                            name: name,
+                            fileType: file.type || 'image/png',
+                            cover: new Blob([file], { type: file.type || 'image/png' }),
+                            subCategory: currentFolderOpened || '',
+                            createdAt: Date.now() + i
+                        });
+                    }
+                    allAssetsCache = null;
+                    updateBadges();
+                    await renderItems();
+                    showToast('🎉', `成功上传 ${files.length} 张图片！`);
+                } catch(err) {
+                    showToast('❌', '图片上传失败');
+                } finally {
+                    e.target.value = '';
+                }
+            };
+        }
+        gInput.click();
+        return;
     }
     if (currentTab === 'themes') {
         const t = document.getElementById('themeFileInput');
@@ -2510,10 +2647,9 @@ function triggerGlobalDirectImport() {
                 await renderItems();
                 showToast('🎉', `成功存入当前分类！`);
             } catch(err) {
-                console.error(err);
-                showToast('❌', '导入失败：' + (err.message || err));
+                showToast('❌', '文件导入失败');
             } finally {
-                input.value = '';
+                e.target.value = '';
             }
         };
     }
@@ -2541,3 +2677,198 @@ function promptCreateFolder() {
     }
 }
 window.promptCreateFolder = promptCreateFolder;
+
+
+async function convertCurrentAssetCategory(targetCat) {
+    if (!currentItem || !targetCat) return;
+    if (currentItem.category === targetCat) {
+        showToast('ℹ️', '当前资产已在该分类中');
+        return;
+    }
+    currentItem.category = targetCat;
+    delete currentItem.subCategory;
+    try {
+        await saveAsset(currentItem);
+        allAssetsCache = null;
+        updateBadges();
+        showToast('🎉', '已成功转换分类！');
+        closeDetailView();
+        switchTab(targetCat);
+    } catch(err) {
+        console.error(err);
+        showToast('❌', '分类转换失败');
+    }
+}
+window.convertCurrentAssetCategory = convertCurrentAssetCategory;
+
+function switchDocVersion(verValue) {
+    if (!currentItem) return;
+    const textarea = document.getElementById('docFullContentTextarea');
+    if (!textarea) return;
+    if (verValue === 'current') {
+        textarea.value = currentItem.rawText || '';
+    } else {
+        const versions = currentItem.historyVersions || [];
+        const found = versions.find(v => String(v.version) === String(verValue));
+        if (found) textarea.value = found.content || '';
+    }
+}
+window.switchDocVersion = switchDocVersion;
+
+async function saveDocContent(isNewVersion) {
+    if (!currentItem) return;
+    const textarea = document.getElementById('docFullContentTextarea');
+    if (!textarea) return;
+    const newText = textarea.value;
+    if (isNewVersion) {
+        currentItem.historyVersions = currentItem.historyVersions || [];
+        const newVerNum = currentItem.historyVersions.length + 2;
+        currentItem.historyVersions.push({ version: newVerNum, content: newText, createdAt: Date.now() });
+        currentItem.rawText = newText;
+        try {
+            await saveAsset(currentItem);
+            allAssetsCache = null;
+            renderDocVersionSelectOptions();
+            showToast('✨', '已保存为新版本！');
+        } catch(e) { showToast('❌', '保存新版本失败'); }
+    } else {
+        currentItem.rawText = newText;
+        try {
+            await saveAsset(currentItem);
+            allAssetsCache = null;
+            showToast('💾', '已覆盖保存当前版本！');
+        } catch(e) { showToast('❌', '覆盖保存失败'); }
+    }
+}
+window.saveDocContent = saveDocContent;
+
+function renderDocVersionSelectOptions() {
+    if (!currentItem) return;
+    const sel = document.getElementById('docVersionSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="current">当前版本 (最新)</option>';
+    const versions = currentItem.historyVersions || [];
+    versions.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.version;
+        opt.innerText = '历史版本 V' + v.version;
+        sel.appendChild(opt);
+    });
+}
+window.renderDocVersionSelectOptions = renderDocVersionSelectOptions;
+
+
+async function triggerGalleryLinkInputPrompt() {
+    const url = prompt('请输入或粘贴图片网络直链 (以 https:// 开头)：');
+    if (!url || !url.trim()) return;
+    const cleanUrl = url.trim();
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+        showToast('⚠️', '请输入有效的 https:// 图片直链！');
+        return;
+    }
+    const defaultName = '图片_' + new Date().toLocaleDateString().replace(/\//g, '');
+    const title = prompt('请输入图片名称/备注：', defaultName) || defaultName;
+
+    try {
+        showToast('⌛', '正在保存网络图片直链...');
+        await saveAsset({
+            id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            category: 'gallery',
+            name: title.trim(),
+            fileType: 'img',
+            url: cleanUrl,
+            rawText: cleanUrl,
+            subCategory: currentFolderOpened || '',
+            createdAt: Date.now()
+        });
+        allAssetsCache = null;
+        updateBadges();
+        await renderItems();
+        showToast('🎉', '网络图片直链保存成功！');
+    } catch(e) {
+        console.error(e);
+        showToast('❌', '保存图片直链失败');
+    }
+}
+window.triggerGalleryLinkInputPrompt = triggerGalleryLinkInputPrompt;
+
+async function triggerDocPasteModalPrompt() {
+    const defaultName = (currentTab === 'regex' ? '番外_' : '文档_') + new Date().toLocaleDateString().replace(/\//g, '');
+    
+    // 注入自定义美化的对话框（模态框）来代替原生的丑陋 prompt
+    const modalHtml = `
+        <div id="customPasteModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div class="bg-white/90 backdrop-blur-md border border-white/60 w-[85%] max-w-[320px] rounded-3xl p-5 shadow-2xl flex flex-col gap-3.5 transform transition-all scale-100">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-8 h-8 rounded-full bg-[#fdf4f5] text-[#d88c9a] flex items-center justify-center shadow-inner">
+                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-extrabold text-[#4a3e3d] text-[15px]">粘贴长篇内容</h3>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-[#8c7476] ml-1">标题 / 备注</label>
+                    <input type="text" id="customPasteTitle" value="${defaultName}" class="w-full bg-[#faf6f0] border border-[#f2e3e3] rounded-xl px-3 py-2 text-xs text-[#4a3e3d] font-bold focus:outline-none focus:border-[#d88c9a] focus:ring-1 focus:ring-[#d88c9a]/30 transition shadow-inner">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-[#8c7476] ml-1">长文本正文内容</label>
+                    <textarea id="customPasteContent" placeholder="在此长按粘贴剪贴板的长篇文本..." class="w-full h-32 bg-[#faf6f0] border border-[#f2e3e3] rounded-xl p-3 text-xs font-mono text-[#4a3e3d] focus:outline-none focus:border-[#d88c9a] focus:ring-1 focus:ring-[#d88c9a]/30 transition shadow-inner custom-scrollbar resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-2.5 mt-2">
+                    <button onclick="document.getElementById('customPasteModal').remove()" class="flex-1 py-2.5 rounded-xl bg-[#f5e8e8] text-[#8c7173] font-bold text-xs hover:bg-[#eedbdb] transition active:scale-95 shadow-sm">
+                        取消
+                    </button>
+                    <button id="customPasteConfirmBtn" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#d88c9a] to-[#c97b8b] text-white font-bold text-xs hover:opacity-90 transition active:scale-95 shadow-md">
+                        确定保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const oldModal = document.getElementById('customPasteModal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    lucide.createIcons();
+
+    const titleInput = document.getElementById('customPasteTitle');
+    const contentInput = document.getElementById('customPasteContent');
+    contentInput.focus();
+
+    document.getElementById('customPasteConfirmBtn').onclick = async () => {
+        const title = titleInput.value.trim() || defaultName;
+        const content = contentInput.value.trim();
+        
+        if (!content) {
+            showToast('⚠️', '请粘贴或输入文本内容！');
+            contentInput.focus();
+            return;
+        }
+
+        document.getElementById('customPasteModal').remove();
+
+        try {
+            showToast('⌛', '正在保存草稿...');
+            const saveCategory = (currentTab === 'regex') ? 'regex' : 'docs';
+            await saveAsset({
+                id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                category: saveCategory,
+                name: title,
+                fileType: 'txt',
+                rawText: content,
+                subCategory: currentFolderOpened || '',
+                createdAt: Date.now()
+            });
+            allAssetsCache = null;
+            updateBadges();
+            await renderItems();
+            showToast('🎉', saveCategory === 'regex' ? '番外/小剧场文本已保存！' : '文本文档已保存！');
+        } catch(e) {
+            console.error(e);
+            showToast('❌', '保存文本失败');
+        }
+    };
+}
+window.triggerDocPasteModalPrompt = triggerDocPasteModalPrompt;
